@@ -21,6 +21,13 @@ do
 		continue
 	fi
 
+	# Make sure that the appropriate HEAD file exists, and skip that BRIK file
+	# if it doesn't.
+	if [[ ! -e ${ifile%.BRIK}.HEAD ]]; then
+		>&2 echo "There is no ${ifile%.BRIK}.HEAD file, exiting."
+		continue
+	fi
+
 	# Get the max brick index (N - 1)
 	maxbrikindex=$(3dinfo -nvi ${ifile})
 
