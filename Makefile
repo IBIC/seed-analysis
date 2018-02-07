@@ -24,7 +24,7 @@ allseeds=$(patsubst $(PROJECT_DIR)/lib/SVC_seeds/%_sphereroi.nii.gz, %, \
 groups=$(patsubst group-%.txt, %, $(wildcard group-*.txt))
 
 #! Which standard brain to register to
-STANDARD=/usr/share/fsl/5.0/data/standard/MNI152_T1_2mm
+STANDARD_MASK=/usr/share/fsl/5.0/data/standard/MNI152_T1_2mm_brain_mask.nii.gz
 
 #! what is the name of the SVC output file?
 SVCSUFFIX=_corrmap_z_mefc
@@ -75,7 +75,7 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-setA $(1) $$(shell sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
 						group-$(1).txt) \
 		-overwrite \
-		-mask $(STANDARD)_brain_mask.nii.gz \
+		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
 		$(ANALYSIS)
 
@@ -130,7 +130,7 @@ $(1)-$(2)/headbrik/$(3)+orig.BRIK: \
 		-setB $(2) $$(shell sed 's|$$$$|/$(3)$(SVCSUFFIX).nii.gz|' \
 						group-$(2).txt) \
 		-overwrite \
-		-mask $(STANDARD)_brain_mask.nii.gz \
+		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
 		$(ANALYSIS)
 
