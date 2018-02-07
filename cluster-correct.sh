@@ -1,10 +1,24 @@
 #!/bin/bash
 
+function usage {
+	echo "./${0} <.*+orig.BRIK> <label to extract> <Zscr.nii.gz> <outdir>"
+	echo
+	echo -e ".*+orig.BRIK:\tBRIK file with output from 3dttest++"
+	echo -e "label:\t\tLabel to extract from .*+orig.BRIK"
+	echo -e "Zscr.nii.gz:\tUncorrected Z-score nifti"
+	echo -e "outdir:\t\tWhere to save cluster-corrected niftis"
+}
+
 # Input files
 orig=${1}
-Zscr=${2}
-label=${3}
+label=${2}
+Zscr=${3}
 outdir=${4}
+
+if [[ ${#} -ne 4 ]]; then
+	usage
+	exit 1
+fi
 
 newfile=${outdir}/$(basename ${Zscr})
 

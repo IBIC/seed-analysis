@@ -1,8 +1,15 @@
 #!/bin/bash
 
+function usage {
+	echo "./extract-all-bricks.sh <output directory> BRIK1[, BRIK2[, ...]]"
+	echo "All BRIK files must have corresponding HEAD files."
+}
+
+
 # Check that there are input files
 if [ ${#} -lt 2 ] ; then
 	echo "Must input at least one BRIK file!"
+	usage
 	exit 1
 fi
 
@@ -45,6 +52,4 @@ do
 			-prefix ${outputdir}/${roi}_${labels[$i]}.nii.gz \
 			${ifile}[${i}]
 	done
-
-
 done
