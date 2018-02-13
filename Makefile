@@ -56,7 +56,7 @@ SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 	mkdir -p $(1)/nifti ;\
-	$(PROJECT_DIR)/bin/extract-all-bricks.sh \
+	./extract-all-bricks.sh \
 		$$(dir $$@) \
 		$(1)/headbrik/$(2)+orig.BRIK
 
@@ -74,6 +74,16 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
 		$(ANALYSIS)
+
+$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
+		$(1)/headbrik/$(2)+orig.BRIK \
+		$(1)/nifti/$(2)_$(1)_mean.nii.gz
+	mkdir -p $(1)/clustcorr ;\
+	./cluster-correct.sh \
+		$(1)/headbrik/$(2)+orig.BRIK \
+		$(1)_Zscr \
+		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
+		$(1)/clustcorr
 
 endef
 
@@ -95,16 +105,15 @@ define twogroup =
 GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
-GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz)
-
+# GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
+# 									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz)
 
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
 #> (those are extracted in the single group analysis.
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 	mkdir -p $(1)/nifti ;\
-	$(PROJECT_DIR)/bin/extract-all-bricks.sh \
+	./extract-all-bricks.sh \
 		$$(dir $$@) \
 		$(1)/headbrik/$(2)+orig.BRIK ;\
 	find $(1)/nifti/ \
@@ -115,15 +124,18 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+orig.BRIK: \
-		$(PROJECT_DIR)/lib/SVC_seeds/$(2)_sphereroi.nii.gz \
-		group-$(1).txt group-$(2).txt
+		$(PROJECT_DIR)/lib/SVC_seeds/$(2)_sphereroi.nii.gz
 	mkdir -p $(1)/headbrik ;\
+	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
+	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
 	3dttest++ \
 		-prefix $(1)/headbrik/$(2) \
-		-setA $(1) $$(shell sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
-						group-$(1).txt) \
-		-setB $(2) $$(shell sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
-						group-$(2).txt) \
+		-setA $$$${group1} \
+				$$$$(sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
+					group-$$$${group1}.txt) \
+		-setB $$$${group2} \
+				$$$$(sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
+					group-$$$${group2}.txt) \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
@@ -148,14 +160,18 @@ $(foreach contrast,$(contrasts), \
 	$(foreach seed,$(allseeds), \
 		$(eval $(call twogroup,$(contrast),$(seed)))))
 
-.PHONY: $(foreach group1,$(groups), \
-			$(foreach group2,$(groups), \
-				GROUPDIFF_${group1}-${group2})) \
-		$(foreach group1,$(groups), \
-			SINGLEGROUP_${group1})
+.PHONY: EVERYTHING \
+		$(foreach contrast,$(contrasts), \
+				GROUPDIFF_${contrast})) \
+		$(foreach group,$(groups), \
+			SINGLEGROUP_${group})
 
 .SECONDARY:
 
+EVERYTHING: $(foreach contrast,$(contrasts), \
+				GROUPDIFF_${contrast})) \
+		$(foreach group,$(groups), \
+			SINGLEGROUP_${group})
 
 ################################################################################
 

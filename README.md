@@ -1,6 +1,6 @@
 # seed-analysis
 
-Abstracted system for doing seed-based correlation analysis with any given set of groups and covariates. Uses AFNI 3dttest++.
+Abstracted system for doing seed-based correlation analysis with any given set of groups and covariates. Uses AFNI `3dttest++`.
 
 ## How to setup this pipeline for any project.
 
@@ -21,7 +21,6 @@ This, like all other settings, can be modified on a per-project basis.
 
 **Important**: All seeds must be generated for all subjects (see next section). If they aren't, the t-test for any seed where one or more subjects is missing the file will fail. 
 
-You can use the special testing recipe `make test-allseeds` which will output all the seeds (see section 4) and the number of seeds that `make` sees (for easy verification).
 
 ### 2. Create `group-*.txt` group files
 
@@ -49,7 +48,7 @@ The first fifty or so lines of the makefile ask the user to fill in six variable
 1. `PROJECT_DIR`: The top-level directory for your project (contains `bin/`, `subjects/`, etc.)
 2. `allseeds`: By default, all the seeds are read in from the file `allseeds` (see section 1). This can be overriden here if you have another method to identify seeds.
 3. `groups`: This pulls the group names out of the `group-*.txt` files (see section 2). Don't override this setting, as later recipes assume the existence of the same `group-*.txt` files.
-4. *`contrasts`: This variable automatically creates all the contrats based on the given group, and filters out any 0 contrats (A - A). Don't change this declaration! There should be `N(N-1)` total contrasts* 
+4. *`contrasts`: This variable automatically creates all the contrasts based on the given group, and filters out any 0 contrats (A - A). Don't change this declaration! There should be N(N-1) total contrasts* 
 4. `STANDARD_MASK`: The MNI-space mask used in `3dttest++`. Using a mask reduces the number of comparisons and speeds up processing. Make sure the resolution (`Xmm`) matches the space your files are registered to. **Default:** 2mm
 5. `SVCSUFFIX`: Depending on how `meica` was set up, the maps aren't necessarily given consistent names. Set this to whatever your project chose as the output. We're looking for the Z-transformed correlation map.
 6. `COVFILE`: The covariates file (see section `XXX`) to read from. Leave blank if there are no covariates.
@@ -60,4 +59,13 @@ The first fifty or so lines of the makefile ask the user to fill in six variable
 Check to make sure your setup is done correctly. You can run `make test-<variable>` to get the contents of a variable and how many "words" it has; useful in checking that you have exported the correct number of contrasts, etc.
 
 
+### 5. Set up covariates
 
+*(This section in progress).*
+
+### 6. Run analyses
+
+There are two primary ways of running this makefile: single-group and between-group analyses. 
+
+ + Run `SINGLEGROUP_<g>`, where `g` is one of the groups set in step 2 to run for a single group. Note that this requires a minimum of 14 subjects.
+ + Run `GROUPDIFF_<g1>-<g2>`, where `g1` and `g2` are two *different* groups from step 2. This also requires 14 subjects, but between the two groups.
