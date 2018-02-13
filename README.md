@@ -4,7 +4,7 @@ Abstracted system for doing seed-based correlation analysis with any given set o
 
 ## How to setup this pipeline for any project.
 
-Below is a general guide to setting up this pipeline for any project.
+Below is a general guide to setting up this pipeline for any project. We assume that you will clone this repository and, in that directory, follow these instructions.
 
 ### 1. Create list of seeds
 
@@ -32,12 +32,12 @@ The makefile identifies groups by looking for files that match the regex `group-
 	
 Please ensure that there are no other files matching this pattern in the working directory. Do not use "`-`" within group names (i.e., within "control" or "patient", because a hyphen is used by the macros to indicate contrasts. 
 
-Group files must be of the following format:
+Group files must contain lines the following format:
 
 	140593 /mnt/praxic/pdnetworksr01/subjects/140593/session1/mcvsa/SVC_MEICA/
 	140605 /mnt/praxic/pdnetworksr01/subjects/140605/session1/mcvsa/SVC_MEICA/
 
-That is, a subject identifier, followed by a space, then followed by the absolute path to the seed-based connectivity maps for that subject. It is important to label each subject because `3dttest++`'s syntax requires each map to be labeled with a subject identifier. 
+Each line consists of a subject identifier, followed by a space, then followed by the absolute path to the seed-based connectivity maps for that subject. It is important to label each subject because `3dttest++`'s syntax requires each map to be labeled with a subject identifier. 
 
 **Important**: All of these directories must contain all of the required files. `3dttest++` will choke if it is given a non-existent file, and will not continue without it. I suggest you create a script to manage the creation of these files based on the existence of the map directories. 
 
@@ -45,8 +45,8 @@ That is, a subject identifier, followed by a space, then followed by the absolut
 
 The first fifty or so lines of the makefile ask the user to fill in six variables (two more are automatically generated). Set these for your project (see details below)
 
-1. `PROJECT_DIR`: The top-level directory for your project (contains `bin/`, `subjects/`, etc.)
-2. `allseeds`: By default, all the seeds are read in from the file `allseeds` (see section 1). This can be overriden here if you have another method to identify seeds.
+1. `PROJECT_DIR`: The top-level directory for your project (in IBIC standard convention, this contains `bin/`, `subjects/`, etc.)
+2. `allseeds`: By default, all the seeds are read in from the file `allseeds` (see section 1). This can be overriden here if you have another method to identify the names of the seeds.
 3. `groups`: This pulls the group names out of the `group-*.txt` files (see section 2). Don't override this setting, as later recipes assume the existence of the same `group-*.txt` files.
 4. *`contrasts`: This variable automatically creates all the contrasts based on the given group, and filters out any 0 contrats (A - A). Don't change this declaration! There should be N(N-1) total contrasts* 
 4. `STANDARD_MASK`: The MNI-space mask used in `3dttest++`. Using a mask reduces the number of comparisons and speeds up processing. Make sure the resolution (`Xmm`) matches the space your files are registered to. **Default:** 2mm
@@ -68,4 +68,20 @@ Check to make sure your setup is done correctly. You can run `make test-<variabl
 There are two primary ways of running this makefile: single-group and between-group analyses. 
 
  + Run `SINGLEGROUP_<g>`, where `g` is one of the groups set in step 2 to run for a single group. Note that this requires a minimum of 14 subjects.
+ For example, you could type:
+ 
+```
+make SINGLEGROUP_patient
+```
+ 
+ to create a directory called `patient` with the single group analyses results for the subjects in the file `group_patient.txt`.
+
  + Run `GROUPDIFF_<g1>-<g2>`, where `g1` and `g2` are two *different* groups from step 2. This also requires 14 subjects, but between the two groups.
+ 
+ Analogously, this would be called using
+
+```
+make GROUPDIFF_control-patient
+```
+
+to create the contrast between patients and controls.
