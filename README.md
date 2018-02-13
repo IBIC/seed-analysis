@@ -27,10 +27,10 @@ This, like all other settings, can be modified on a per-project basis.
 The makefile identifies groups by looking for files that match the regex `group-[[:alpha:]]*.txt`. For example, these files would create the groups "control" and "patient."
 
 	group-control.txt
-	patient-control.txt
+	group-patient.txt
 	Makefile
 	
-Please ensure that there are no other files matching this pattern in the working directory. Do not use "`-`" in group names, as that is used to indicate contrasts. 
+Please ensure that there are no other files matching this pattern in the working directory. Do not use "`-`" within group names (i.e., within "control" or "patient", because a hyphen is used by the macros to indicate contrasts. 
 
 Group files must be of the following format:
 
