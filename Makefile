@@ -73,7 +73,8 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
-		$(ANALYSIS)
+		$(ANALYSIS) \
+		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
@@ -113,7 +114,7 @@ GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 #> (those are extracted in the single group analysis.
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 	mkdir -p $(1)/nifti ;\
-	./extract-all-bricks.sh \
+	bin/extract-all-bricks.sh \
 		$$(dir $$@) \
 		$(1)/headbrik/$(2)+orig.BRIK ;\
 	find $(1)/nifti/ \
@@ -139,13 +140,15 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
-		$(ANALYSIS)
+		$(ANALYSIS)\
+		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
 	mkdir -p $(1)/clustcorr ;\
-	./cluster-correct.sh \
+	export OMP_NUM_THREADS=1 ;\
+	bin/cluster-correct.sh \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)_Zscr \
 		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
