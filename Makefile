@@ -106,8 +106,8 @@ define twogroup =
 GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
-# GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-# 									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz)
+GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
+									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz)
 
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
@@ -145,13 +145,15 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
-		$(1)/nifti/$(2)_$(1)_mean.nii.gz
+		$(1)/nifti/$(2)_$(1)_mean.nii.gz \
+		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
 	bin/cluster-correct.sh \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)_Zscr \
 		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
+		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D \
 		$(1)/clustcorr
 
 

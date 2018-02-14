@@ -9,13 +9,17 @@ function usage {
 	echo -e "outdir:\t\tWhere to save cluster-corrected niftis"
 }
 
+# What alpha value to use for determining ROI size
+ALPHA=.05
+
 # Input files
 orig=${1}
 label=${2}
 Zscr=${3}
-outdir=${4}
+ttest=${4}
+outdir=${5}
 
-if [[ ${#} -ne 4 ]]; then
+if [[ ${#} -ne 5 ]]; then
 	usage
 	exit 1
 fi
@@ -30,12 +34,25 @@ fslmaths ${Zscr} -thr 0 ${newfile}
 
 newname=$(basename ${Zscr} .nii.gz | sed 's/_Zscr/_clusters/')
 
-# Auto extact parameters
+# Get the minimum cluster size
+p05=$(grep "^ 0.050000" ${ttest})
+# Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
+column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
 
+# Get the ROI size in voxels
+ROIsize_voxel=$(echo ${p05} | awk "{print \$${column}}")
+
+# Get the voxel size in mm for voxel -> uL conversion
+voxelsize=$(fslinfo ${Zscr} | head -n9 | tail -n3 | awk '{print $2}')
+voxelvol=$(echo ${voxelsize} | sed 's/ /\*/g' | bc)
+
+ROIsize_uL=$(echo "${ROIsize_voxel} * ${voxelvol}" | bc | sed 's/.0\+$//')
+
+# Auto extact parameters
 3dclust \
 	-1tindex -1dindex \
 	-savemask ${outdir}/${newname} \
-	-1clip 2 5 3000 \
+	-1clip 0.3 5 ${ROIsize_uL} \
 	${orig}[${brik}]
 
 # If there was an output from 3dclust (i.e. if the new BRIK/HEAD files exist)
