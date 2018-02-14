@@ -141,7 +141,7 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
 		$(ANALYSIS)\
-		-prefix_clustsim $(1)/headbrik/cc.$(2)
+		-prefix_clustsim $(1)/headbrik/cs.$(2)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
@@ -153,7 +153,7 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)_Zscr \
 		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
-		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D \
+		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D \
 		$(1)/clustcorr
 
 
