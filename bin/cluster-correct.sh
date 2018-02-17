@@ -42,17 +42,27 @@ column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
 # Get the ROI size in voxels
 ROIsize_voxel=$(echo ${p05} | awk "{print \$${column}}")
 
-# Get the voxel size in mm for voxel -> uL conversion
-voxelsize=$(fslinfo ${Zscr} | head -n9 | tail -n3 | awk '{print $2}')
-voxelvol=$(echo ${voxelsize} | sed 's/ /\*/g' | bc)
+echo "ROI size: ${ROIsize_voxel}"
 
-ROIsize_uL=$(echo "${ROIsize_voxel} * ${voxelvol}" | bc | sed 's/.0\+$//')
+# Get the degrees of freedom
+contrasts=($(basename ${label} | sed -e 's/_Zscr//' -e 's/-/ /'))
+if [ ${#contrasts[@]} -eq 1 ] ; then
+	dof=$(wc -l < group-${contrasts[0]}.txt)
+else
+	dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
+			$(wc -l < group-${contrasts[0]}.txt) - 2 ))
+fi
+
+Z=$(R --no-save --slave <<-EOF
+	cat(qt(.05, ${dof}, lower.tail = FALSE))
+EOF
+)
 
 # Auto extact parameters
 3dclust \
-	-1tindex -1dindex \
+	-NN1 ${ROIsize_voxel} \
+	-1thresh ${Z} \
 	-savemask ${outdir}/${newname} \
-	-1clip 0.3 5 ${ROIsize_uL} \
 	${orig}[${brik}]
 
 # If there was an output from 3dclust (i.e. if the new BRIK/HEAD files exist)
@@ -81,9 +91,9 @@ if [ -e ${outdir}/${newname}+orig.BRIK ] ; then
 else
 	echo "No clusters found"
 
+	# Binarize
 	fslmaths \
-		${newfile} -abs \
-		-div ${newfile} \
+		${newfile} -bin
 		${outdir}/${newname}.nii.gz
 
 	rm ${newfile}

@@ -28,16 +28,24 @@ SVCSUFFIX=_corrmap_z_mefc
 #! Get the covariates file. None by default
 COVFILE=
 
-#! Which type of analysis to use. Use -Clustsim 1 to do cluster correction on a
-#! single core.
-ANALYSIS=-Clustsim 1
-# ANALYSIS=-ETAC
-
 # If a covariate file is given, add the flag to the COVARIATE variable
 ifeq ($(COVFILE),)
 COVARIATE=
 else
 COVARIATE=-covariates $(COVFILE)
+endif
+
+#! Which type of analysis to use. Use -Clustsim 1 to do cluster correction on a
+#! single core.
+ANALYSIS=-Clustsim 1
+# ANALYSIS=-ETAC
+
+#! Check whether to do a paired t-test (group diff only); defaults to "no"
+PAIRED=
+ifneq ($(PAIRED),"")
+PAIRFLAG=-paired
+else
+PAIRFLAG=
 endif
 
 ################################################################################
@@ -107,7 +115,9 @@ GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
 GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz)
+									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz) \
+						$(foreach seed,$(allseeds), \
+									$(1)/clustcorr/$(seed)_$(1)_clusters.png)
 
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
@@ -119,7 +129,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 		$(1)/headbrik/$(2)+orig.BRIK ;\
 	find $(1)/nifti/ \
 		-mindepth 1 \
-		! -name "$(2)_*-*_*.nii.gz" \
+		! -name "*_*-*_*.nii.gz" \
 		-delete
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
@@ -131,6 +141,7 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
 	3dttest++ \
 		-prefix $(1)/headbrik/$(2) \
+		-prefix_clustsim $(1)/headbrik/cs.$(2) \
 		-setA $$$${group1} \
 				$$$$(sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
 					group-$$$${group1}.txt) \
@@ -140,13 +151,13 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
 		$(COVARIATE) \
-		$(ANALYSIS)\
-		-prefix_clustsim $(1)/headbrik/cs.$(2)
+		$(ANALYSIS) \
+		$(PAIRFLAG)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz \
-		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
+		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
 	bin/cluster-correct.sh \
@@ -155,6 +166,11 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
 		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D \
 		$(1)/clustcorr
+
+
+$(1)/clustcorr/$(2)_$(1)_clusters.png: \
+		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
+	slices $$< -o $$@
 
 
 endef
