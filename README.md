@@ -68,6 +68,8 @@ To override the default value of these variables, simply set a new value for the
 1. `Analysis`: Which type of `3dttest++` test to use. Available options are `ETAC` or `Clustsim`. Note that the number of cores can be specified as an argument to these flags, or left off to use all available cores. **Important:** The leading dash must be included. 
 2. `Paired`: By default, an unpaired t-test is executed. To do a paired t-test, changed the value of `Paired` to anything other than the empty string. `3dttest++` will fail if your subject lists aren't properly paired.
 
+`COVFILE`, like any other variable, can also be modified from the command line, but I'm leaving it in as a permanent variable because all covariates must be in that one file (see section 5).
+
 ---
 
 **`lowercase`: These variables are automatically created variables.** 
@@ -77,7 +79,7 @@ In general, they shouldn't be overwritten, especially the variables in *italics*
 1. `seedsdir`: This variable is read in from the first lne of `allseeds.txt` and contains all the ROIs used in later analyses.
 2. `allseeds`: By default, all the seeds are read in from the file `allseeds` (see section 1). This can be overriden here if you have another method to identify the names of the seeds.
 3. `groups`: This pulls the group names out of the `group-*.txt` files (see section 2). Don't override this setting, as later recipes assume the existence of the same `group-*.txt` files.
-4. *`contrasts`: This variable automatically creates all the contrasts based on the given group, and filters out any 0 contrats (A - A). Don't change this declaration! There should be N(N-1) total contrasts* 
+4. *`contrasts`: This variable automatically creates all the contrasts based on the given group, and filters out any 0 contrasts (A - A). Don't change this declaration! There should be N(N-1) total contrasts* 
 7. *`covariate`: This variable is set automatically based on whether there is a `COVFILE`. It is later read by `3dttest++`, and adds the option `-covariates` for the proper syntax. Don't change this logic statement.*
 8. *`pairflag`: Adds the `-paired` flag to the `GROUPDIFF` t-test if the `Paired` variable is set to true.*
 
@@ -88,7 +90,31 @@ Check to make sure your setup is done correctly. You can run `make test-<variabl
 
 ### 5. Set up covariates
 
-*(This section in progress).*
+
+A covariate file takes the following format, including up to 32 whitespace-separated columns (including the subject identifier column). 
+
+    idnum   age gender  ...
+    RRF01   18  0       ...
+    RRF02   20  1       ...
+    RRF04   21  1       ...
+    RRF05   22  0       ...
+    ...     ... ...
+    
+From the [`3dttest++` manual](https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dttest++.html):
+
+> \* A maximum of 31 covariates are allowed.  If you have more, then
+   seriously consider the likelihood that you are completely deranged.
+   
+    
+The column headers will be part of the output filenames, so ensure that they are descriptive, but not too cumbersome. For example, you might end up with files named `DMNLPCC_PDa-PDr_mean_age.nii.gz`.
+
+You can only add one covariate file, so the covariates for all subjects in all groups must be present in this one file. 
+
+There is no required name for the covariate file (`COVFILE` is empty by default), but `covariates.txt` works just fine.
+
+Additionally from the `3dttest++` manual:
+
+> \* There is no provision for missing values -- the entire table must be filled!
 
 ### 6. Run analyses
 
