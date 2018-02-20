@@ -135,7 +135,7 @@ Where "`n`" is the number of jobs (which you can get with `make test-allseeds` t
 
 Or, you can submit the jobs using [`rmake`](https://github.com/IBIC/rmake):
 
-    rmake TARGET=<TARGET> 
+    rmake -T <TARGET> 
 
 
 
