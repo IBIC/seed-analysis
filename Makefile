@@ -9,7 +9,7 @@ PROJECT_DIR=/mnt/praxic/pdnetworksr01/
 
 #! Seed directory is where all the seeds are kept for this project. This
 #! directory is the first entry in allseeds.txt
-SEEDS_DIR=$(shell head -n1 allseeds.txt)
+seedsdir=$(shell head -n1 allseeds.txt)
 
 #! Seeds is the list of seeds (w/o extensions, etc). They are the n>1 lines in
 #! allseeds.txt
@@ -24,7 +24,8 @@ contrasts=$(foreach g1,$(groups), \
 			$(foreach g2,$(groups), \
 				$(filter-out $(g1)-$(g1),$(g1)-$(g2)) ))
 
-#! Which standard brain to register to
+#! Which standard brain to register to. Be sure to check the resolution.
+#! Default resolution: 2mm
 STANDARD_MASK=/usr/share/fsl/5.0/data/standard/MNI152_T1_2mm_brain_mask.nii.gz
 
 #! what is the name of the SVC output file?
@@ -33,24 +34,24 @@ SVCSUFFIX=_corrmap_z_mefc
 #! Get the covariates file. None by default
 COVFILE=
 
-# If a covariate file is given, add the flag to the COVARIATE variable
+# If a covariate file is given, add the flag to the covariate variable
 ifeq ($(COVFILE),)
-COVARIATE=
+covariate=
 else
-COVARIATE=-covariates $(COVFILE)
+covariate=-covariates $(COVFILE)
 endif
 
 #! Which type of analysis to use. Use -Clustsim 1 to do cluster correction on a
 #! single core.
-ANALYSIS=-Clustsim 1
-# ANALYSIS=-ETAC
+Analysis=-Clustsim 1
+# Analysis=-ETAC
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
-PAIRED=
-ifeq ($(PAIRED),)
-PAIRFLAG=
+Paired=
+ifeq ($(Paired),)
+pairflag=
 else
-PAIRFLAG=-paired
+pairflag=-paired
 endif
 
 ################################################################################
@@ -78,7 +79,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+orig.BRIK: \
-		$(SEEDS_DIR)/$(2)*.nii.gz \
+		$(seedsdir)/$(2)*.nii.gz \
 		group-$(1).txt
 	mkdir -p $(1)/headbrik ;\
 	3dttest++ \
@@ -87,8 +88,8 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 						group-$(1).txt) \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
-		$(COVARIATE) \
-		$(ANALYSIS) \
+		$(covariate) \
+		$(Analysis) \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
@@ -147,7 +148,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+orig.BRIK: \
-		$(SEEDS_DIR)/$(2)*.nii.gz
+		$(seedsdir)/$(2)*.nii.gz
 	mkdir -p $(1)/headbrik ;\
 	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
 	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
@@ -162,9 +163,9 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 					group-$$$${group2}.txt) \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
-		$(COVARIATE) \
-		$(ANALYSIS) \
-		$(PAIRFLAG)
+		$(covariate) \
+		$(Analysis) \
+		$(pairflag)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
