@@ -40,6 +40,8 @@ Group files must contain lines the following format:
 
 Each line consists of a subject identifier, followed by a space, then followed by the absolute path to the seed-based connectivity maps for that subject. It is important to label each subject because the syntax of `3dttest++` requires each map to be labeled with a subject identifier. 
 
+For info on the `[[:alpha:]]` syntax, see [this page](https://www.regular-expressions.info/posixbrackets.html). It is equivalent to `[a-zA-Z]`.
+
 **Important**: All of these directories must contain all of the required files. `3dttest++` will choke if it is given a non-existent file, and will not continue without it. I suggest you create a script to manage the creation of these files based on the existence of the map directories. 
 
 ### 3. Set variables
@@ -110,3 +112,30 @@ make GROUPDIFF_control-patient
 ```
 
 to create the contrast between patients and controls.
+
+### 7. Notes on parallelizing
+
+You might want to (a) parallelize processing of a single ROI to speed it up (see 7.1); or (b) parallelize processing of multiple ROIs to decrease total competion time (see 7.2). 
+
+#### 7.1 Parallelizing locally
+
+The easiest way to parallelize locally is to override `Analysis` to be `-Clustsim`, without an integer argument. Then, `3dttest++` will use all available cores.
+
+Use this to test one ROI, as testing multiple will rapidly overwhelm your machine, but this is useful for rapid testing over waiting an hour+ for one-core execution to complete.
+
+#### 7.2 Parellelizing on the grid engine
+
+Check that the grid engine is set up properly for your user/machine. See [here](http://faculty.washington.edu/madhyt/using-the-gridengine-to-process-data-quickly/) for instructions.
+
+You can submit the jobs on the queue with `qmake`:
+
+    qmake -cwd -V -- -j <n> -k <TARGET>
+    
+Where "`n`" is the number of jobs (which you can get with `make test-allseeds` to see how many you can parallelize), and `TARGET` is the `make` target you want to build (like `SINGLEGROUP_PD`). The `-cwd` flag to qmake tells it to work in the current directory, and `-V` passes along all environment variables.
+
+Or, you can submit the jobs using [`rmake`](https://github.com/IBIC/rmake):
+
+    rmake TARGET=<TARGET> 
+
+
+

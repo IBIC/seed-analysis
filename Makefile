@@ -82,6 +82,7 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		$(seedsdir)/$(2)*.nii.gz \
 		group-$(1).txt
 	mkdir -p $(1)/headbrik ;\
+	export OMP_NUM_THREADS=1 ;\
 	3dttest++ \
 		-prefix $(1)/headbrik/$(2) \
 		-setA $(1) $$(shell sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
@@ -150,6 +151,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 $(1)/headbrik/$(2)+orig.BRIK: \
 		$(seedsdir)/$(2)*.nii.gz
 	mkdir -p $(1)/headbrik ;\
+	export OMP_NUM_THREADS=1 ;\
 	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
 	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
 	3dttest++ \
