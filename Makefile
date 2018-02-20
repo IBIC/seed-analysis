@@ -42,10 +42,10 @@ ANALYSIS=-Clustsim 1
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
 PAIRED=
-ifneq ($(PAIRED),"")
-PAIRFLAG=-paired
-else
+ifeq ($(PAIRED),)
 PAIRFLAG=
+else
+PAIRFLAG=-paired
 endif
 
 ################################################################################
@@ -58,13 +58,15 @@ SINGLEGROUP_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
 SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz)
+								$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz) \
+							$(foreach seed,$(allseeds), \
+								$(1)/clustcorr/$(seed)_$(1)_clusters.png)
 
 #> Convert the mean images from the first subbrick (#0)
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 	mkdir -p $(1)/nifti ;\
-	./extract-all-bricks.sh \
+	bin/extract-all-bricks.sh \
 		$$(dir $$@) \
 		$(1)/headbrik/$(2)+orig.BRIK
 
@@ -88,11 +90,16 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
 	mkdir -p $(1)/clustcorr ;\
-	./cluster-correct.sh \
+	bin/cluster-correct.sh \
 		$(1)/headbrik/$(2)+orig.BRIK \
 		$(1)_Zscr \
 		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
+		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D \
 		$(1)/clustcorr
+
+$(1)/clustcorr/$(2)_$(1)_clusters.png: \
+		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
+	slices $$< -o $$@
 
 endef
 

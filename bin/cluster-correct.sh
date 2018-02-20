@@ -58,24 +58,26 @@ Z=$(R --no-save --slave <<-EOF
 EOF
 )
 
+echo "Z threshold is ${Z} (dof: ${dof})"
+
 # Auto extact parameters
 3dclust \
 	-NN1 ${ROIsize_voxel} \
 	-1thresh ${Z} \
-	-savemask ${outdir}/${newname} \
+	-prefix ${outdir}/${newname}vals \
 	${orig}[${brik}]
 
 # If there was an output from 3dclust (i.e. if the new BRIK/HEAD files exist)
 # then convert it to nifti and overlay it on the Zscr
-if [ -e ${outdir}/${newname}+orig.BRIK ] ; then
+if [ -e ${outdir}/${newname}vals+orig.BRIK ] ; then
 
 	# Convert to NIFTI
 	3dAFNItoNIFTI \
-		-prefix ${outdir}/${newname}_sig.nii.gz \
-		${outdir}/${newname}+orig.BRIK
+		-prefix ${outdir}/${newname}_sigvals.nii.gz \
+		${outdir}/${newname}vals+orig.BRIK
 
 	# Binarize (3dAFNItoNIFTI gives each continguous ROI a different number)
-	fslmaths ${outdir}/${newname}_sig.nii.gz -bin \
+	fslmaths ${outdir}/${newname}_sigvals.nii.gz -bin \
 		${outdir}/${newname}_sig.nii.gz
 
 	# Add clusters to Zscr
@@ -85,16 +87,15 @@ if [ -e ${outdir}/${newname}+orig.BRIK ] ; then
 		${outdir}/${newname}.nii.gz
 
 	# Clean up
-	rm ${outdir}/${newname}+orig.{BRIK,HEAD} \
-		${newfile}
+	rm ${outdir}/${newname}vals+orig.{BRIK,HEAD}
 
 else
 	echo "No clusters found"
 
 	# Binarize
 	fslmaths \
-		${newfile} -bin
+		${newfile} -bin \
 		${outdir}/${newname}.nii.gz
 
-	rm ${newfile}
+	# rm ${newfile}
 fi
