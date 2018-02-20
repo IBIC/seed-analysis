@@ -7,8 +7,13 @@
 #! Project root directory
 PROJECT_DIR=/mnt/praxic/pdnetworksr01/
 
-#! Seeds is the list of seeds in $(PROJECT_DIR)/lib/SVC_seeds/
-allseeds=$(shell cat allseeds.txt)
+#! Seed directory is where all the seeds are kept for this project. This
+#! directory is the first entry in allseeds.txt
+SEEDS_DIR=$(shell head -n1 allseeds.txt)
+
+#! Seeds is the list of seeds (w/o extensions, etc). They are the n>1 lines in
+#! allseeds.txt
+allseeds=$(shell tail -n+2 allseeds.txt)
 
 #! What are the groups in this analysis?
 groups=$(patsubst group-%.txt, %, $(wildcard group-[[:alpha:]]*.txt))
@@ -73,7 +78,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+orig.BRIK: \
-		$(PROJECT_DIR)/lib/SVC_seeds/$(2)_sphereroi.nii.gz \
+		$(SEEDS_DIR)/$(2)*.nii.gz \
 		group-$(1).txt
 	mkdir -p $(1)/headbrik ;\
 	3dttest++ \
@@ -142,7 +147,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+orig.BRIK: \
-		$(PROJECT_DIR)/lib/SVC_seeds/$(2)_sphereroi.nii.gz
+		$(SEEDS_DIR)/$(2)*.nii.gz
 	mkdir -p $(1)/headbrik ;\
 	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
 	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
