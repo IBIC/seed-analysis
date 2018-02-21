@@ -1,12 +1,11 @@
 #!/bin/bash
 
 function usage {
-	echo "./${0} <.*+orig.BRIK> <label to extract> <Zscr.nii.gz> <OUTPUTDIR>"
+	echo "./${0} [-a A] -i <input prefix> -o <output dir>"
 	echo
-	echo -e ".*+orig.BRIK:\tBRIK file with output from 3dttest++"
-	echo -e "label:\t\tLabel to extract from .*+orig.BRIK"
-	echo -e "Zscr.nii.gz:\tUncorrected Z-score nifti"
-	echo -e "OUTPUTDIR:\t\tWhere to save cluster-corrected niftis"
+	echo -e "\t-i\tInput prefix. Path to HEAD/BRIK w/o +{orig,tlrc}.{HEAD,BRIK}"
+	echo -e "\t-o\tOutput directory"
+	echo -e "\t-a\tOPTIONAL, set custom alpha value (default .5)"
 }
 
 # Default alpha value
@@ -30,6 +29,12 @@ while getopts ":a:i:o:" opt ; do
 			echo "Output dir is ${OUTPUTDIR}"
 	esac
 done
+
+# Check that the two req. args (and their flags) are on the CLI
+if [[ ${#} -lt 4 ]]; then
+	usage
+	exit 1
+fi
 
 echo "Alpha level is ${ALPHA}"
 mkdir -p ${OUTPUTDIR}
@@ -82,6 +87,7 @@ for brik in $(seq 0 ${maxbrikindex}) ; do
 	# option)
 	rm -f ${OUTPUTDIR}/${prefix}_${thislabel}_vals+*.{BRIK,HEAD}
 
+	# Do the cluster correction and save the values to _vals
 	3dclust \
 		-NN1 ${ROIsize_voxel} \
 		-1thresh ${Z} \
@@ -132,4 +138,5 @@ for brik in $(seq 0 ${maxbrikindex}) ; do
 
 done
 
+# Clean up
 rm -f ${OUTPUTDIR}/${prefix}{*temp*,*_sigmask}.nii.gz
