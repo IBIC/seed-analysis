@@ -1,101 +1,135 @@
 #!/bin/bash
 
 function usage {
-	echo "./${0} <.*+orig.BRIK> <label to extract> <Zscr.nii.gz> <outdir>"
+	echo "./${0} <.*+orig.BRIK> <label to extract> <Zscr.nii.gz> <OUTPUTDIR>"
 	echo
 	echo -e ".*+orig.BRIK:\tBRIK file with output from 3dttest++"
 	echo -e "label:\t\tLabel to extract from .*+orig.BRIK"
 	echo -e "Zscr.nii.gz:\tUncorrected Z-score nifti"
-	echo -e "outdir:\t\tWhere to save cluster-corrected niftis"
+	echo -e "OUTPUTDIR:\t\tWhere to save cluster-corrected niftis"
 }
 
-# What alpha value to use for determining ROI size
+# Default alpha value
 ALPHA=.05
 
-# Input files
-orig=${1}
-label=${2}
-Zscr=${3}
-ttest=${4}
-outdir=${5}
+while getopts ":a:i:o:" opt ; do
+	case ${opt} in
+		a)
+			ALPHA=${OPTARG} ;;
+		i)
+			# Check that input file exists
+			if find . -wholename "${INPUT}+????.BRIK" ; then
+				INPUT=${OPTARG}
+				echo "Input prefix is ${INPUT}"
+			else
+				echo "Input file ${OPTARG}+????.BRIK is missing."
+			fi
+			;;
+		o)
+			OUTPUTDIR=${OPTARG}
+			echo "Output dir is ${OUTPUTDIR}"
+	esac
+done
 
-if [[ ${#} -ne 5 ]]; then
-	usage
-	exit 1
-fi
+echo "Alpha level is ${ALPHA}"
+mkdir -p ${OUTPUTDIR}
+prefix=$(basename ${INPUT})
 
-newfile=${outdir}/$(basename ${Zscr})
+# Find the input file. The suffix (????) could be either tlrc or orig, so check
+inputfile=$(find $(dirname ${INPUT}) -name "${prefix}+????.BRIK")
 
-# Get the label name for extraction
-brik=$(3dinfo -label2index ${label} ${orig})
-echo "Brik ID is ${brik}"
-
-fslmaths ${Zscr} -thr 0 ${newfile}
-
-newname=$(basename ${Zscr} .nii.gz | sed 's/_Zscr/_clusters/')
+# Get the maximum brik index (0-indexed)
+maxbrikindex=$(3dinfo -nvi ${inputfile})
+echo "Max brik index: ${maxbrikindex}"
 
 # Get the minimum cluster size
+# The t-test info is in this 1D file
+ttest=$(dirname ${INPUT})/cs.${prefix}.CSimA.NN1_1sided.1D
 p05=$(grep "^ 0.050000" ${ttest})
+
 # Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
 column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
 
 # Get the ROI size in voxels
 ROIsize_voxel=$(echo ${p05} | awk "{print \$${column}}")
-
 echo "ROI size: ${ROIsize_voxel}"
 
-# Get the degrees of freedom
-contrasts=($(basename ${label} | sed -e 's/_Zscr//' -e 's/-/ /'))
-if [ ${#contrasts[@]} -eq 1 ] ; then
-	dof=$(wc -l < group-${contrasts[0]}.txt)
-else
+# Loop over each sub-brik and extract it and do cluster correction on it if it's
+# a contrast brik.
+label=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
+for brik in $(seq 0 ${maxbrikindex}) ; do
+
+	# If it's not a diff brik, skip it.
+	if [[ ! ${label[${brik}]} =~ ^.*-.*_Zscr$ ]]; then
+		continue
+	fi
+
+	thislabel=$(echo ${label[${brik}]} | sed 's/_Zscr//')
+
+	# Get the DoF by counting the number of subjects in each group and
+	# subtracting two (for each group)
+	contrasts=($(echo ${thislabel} | sed -e 's/_Zscr//' -e 's/-/ /'))
 	dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
 			$(wc -l < group-${contrasts[0]}.txt) - 2 ))
-fi
 
-Z=$(R --no-save --slave <<-EOF
-	cat(qt(.05, ${dof}, lower.tail = FALSE))
-EOF
-)
+	# Convert from DoF to a Z score using a p-val of <.05 using a 1-sided t-test
+	Z=$(R --no-save --slave <<-EOF
+		cat(qt(.05, ${dof}, lower.tail = FALSE))
+	EOF
+	)
 
-echo "Z threshold is ${Z} (dof: ${dof})"
+	# If the output file exists, remove it (3dclust doesn't have an -overwrite
+	# option)
+	rm -f ${OUTPUTDIR}/${prefix}_${thislabel}_vals+*.{BRIK,HEAD}
 
-# Auto extact parameters
-3dclust \
-	-NN1 ${ROIsize_voxel} \
-	-1thresh ${Z} \
-	-prefix ${outdir}/${newname}vals \
-	${orig}[${brik}]
+	3dclust \
+		-NN1 ${ROIsize_voxel} \
+		-1thresh ${Z} \
+		-prefix ${OUTPUTDIR}/${prefix}_${thislabel}_vals \
+		${inputfile}[${brik}]
 
-# If there was an output from 3dclust (i.e. if the new BRIK/HEAD files exist)
-# then convert it to nifti and overlay it on the Zscr
-if [ -e ${outdir}/${newname}vals+orig.BRIK ] ; then
-
-	# Convert to NIFTI
+	# Extract the Z scr block (we need it either as a "correction failed"
+	# image  or to overlay corrected images on.
 	3dAFNItoNIFTI \
-		-prefix ${outdir}/${newname}_sigvals.nii.gz \
-		${outdir}/${newname}vals+orig.BRIK
+		-prefix ${OUTPUTDIR}/${prefix}_${thislabel}-temp1.nii.gz \
+		${inputfile}[${brik}]
 
-	# Binarize (3dAFNItoNIFTI gives each continguous ROI a different number)
-	fslmaths ${outdir}/${newname}_sigvals.nii.gz -bin \
-		${outdir}/${newname}_sig.nii.gz
+	# Binarize Zscr vals
+	fslmaths ${OUTPUTDIR}/${prefix}_${thislabel}-temp1.nii.gz \
+		-thr 0 -bin \
+		${OUTPUTDIR}/${prefix}_${thislabel}-temp2.nii.gz
 
-	# Add clusters to Zscr
-	fslmaths ${newfile} -abs \
-		-div ${newfile} \
-		-add ${outdir}/${newname}_sig.nii.gz \
-		${outdir}/${newname}.nii.gz
 
-	# Clean up
-	rm ${outdir}/${newname}vals+orig.{BRIK,HEAD}
+	# If the output file was created (i.e. there ARE sig. clusters)
+	nfound=$(find ${OUTPUTDIR} \
+				-name "${prefix}_${thislabel}_vals+????.BRIK" | wc -l)
+	if [[ ${nfound} > 0 ]] ; then
 
-else
-	echo "No clusters found"
+		echo "Converting to NIFTI"
 
-	# Binarize
-	fslmaths \
-		${newfile} -bin \
-		${outdir}/${newname}.nii.gz
+		# Convert to NIFTI
+		3dAFNItoNIFTI \
+			-prefix ${OUTPUTDIR}/${prefix}_${thislabel}_sigvals.nii.gz \
+			${OUTPUTDIR}/${prefix}_${thislabel}_vals+*
 
-	# rm ${newfile}
-fi
+		rm ${OUTPUTDIR}/${prefix}_${thislabel}_vals+????.{BRIK,HEAD}
+
+		# Binarize values to get binary mask
+		fslmaths ${OUTPUTDIR}/${prefix}_${thislabel}_sigvals.nii.gz \
+			-bin \
+			${OUTPUTDIR}/${prefix}_${thislabel}_sigmask.nii.gz
+
+		# Add binarized sig values to binarized Zmap to get 1=n.s, 2=s.
+		fslmaths ${OUTPUTDIR}/${prefix}_${thislabel}-temp2.nii.gz \
+			-add ${OUTPUTDIR}/${prefix}_${thislabel}_sigmask.nii.gz \
+			${OUTPUTDIR}/${prefix}_${thislabel}.nii.gz
+
+	else
+
+		mv ${OUTPUTDIR}/${prefix}_${thislabel}{-temp1,_clusters}.nii.gz
+
+	fi
+
+done
+
+rm -f ${OUTPUTDIR}/${prefix}{*temp*,*_sigmask}.nii.gz

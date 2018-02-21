@@ -98,11 +98,8 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
 	mkdir -p $(1)/clustcorr ;\
 	bin/cluster-correct.sh \
-		$(1)/headbrik/$(2)+orig.BRIK \
-		$(1)_Zscr \
-		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
-		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D \
-		$(1)/clustcorr
+		-i $(1)/headbrik/$(2) \
+		-o $(1)/clustcorr
 
 $(1)/clustcorr/$(2)_$(1)_clusters.png: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
@@ -176,16 +173,13 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
 	bin/cluster-correct.sh \
-		$(1)/headbrik/$(2)+orig.BRIK \
-		$(1)_Zscr \
-		$(1)/nifti/$(2)_$(1)_Zscr.nii.gz \
-		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D \
-		$(1)/clustcorr
+		-i $(1)/headbrik/$(2) \
+		-o $(1)/clustcorr
 
 
 $(1)/clustcorr/$(2)_$(1)_clusters.png: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
-	slices $$< -o $$@
+	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)*.nii.gz
 
 
 endef
