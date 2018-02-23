@@ -4,8 +4,8 @@
 #* This means it does generate recipes in the form of GROUPDIFF_A-A, which is
 #* an unavoidable side-effect.
 
-#! Project root directory
-PROJECT_DIR=/mnt/praxic/pdnetworksr01/
+# Has all the user-set variables like PROJECT_DIR
+include settings.conf
 
 #! Seed directory is where all the seeds are kept for this project. This
 #! directory is the first entry in allseeds.txt
@@ -24,27 +24,12 @@ contrasts=$(foreach g1,$(groups), \
 			$(foreach g2,$(groups), \
 				$(filter-out $(g1)-$(g1),$(g1)-$(g2)) ))
 
-#! Which standard brain to register to. Be sure to check the resolution.
-#! Default resolution: 2mm
-STANDARD_MASK=/usr/share/fsl/5.0/data/standard/MNI152_T1_2mm_brain_mask.nii.gz
-
-#! what is the name of the SVC output file?
-SVCSUFFIX=_corrmap_z_mefc
-
-#! Get the covariates file. None by default
-COVFILE=
-
 # If a covariate file is given, add the flag to the covariate variable
 ifeq ($(COVFILE),)
 covariate=
 else
 covariate=-covariates $(COVFILE)
 endif
-
-#! Which type of analysis to use. Use -Clustsim 1 to do cluster correction on a
-#! single core.
-Analysis=-Clustsim 1
-# Analysis=-ETAC
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
 Paired=
@@ -70,15 +55,15 @@ SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
 
 #> Convert the mean images from the first subbrick (#0)
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
-$(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
+$(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 	mkdir -p $(1)/nifti ;\
 	bin/extract-all-bricks.sh \
 		$$(dir $$@) \
-		$(1)/headbrik/$(2)+orig.BRIK
+		$(1)/headbrik/$(2)+????.BRIK
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
-$(1)/headbrik/$(2)+orig.BRIK: \
+$(1)/headbrik/$(2)+????.BRIK: \
 		$(seedsdir)/$(2)*.nii.gz \
 		group-$(1).txt
 	mkdir -p $(1)/headbrik ;\
@@ -94,7 +79,7 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
-		$(1)/headbrik/$(2)+orig.BRIK \
+		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
 	mkdir -p $(1)/clustcorr ;\
 	bin/cluster-correct.sh \
@@ -133,11 +118,11 @@ GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
 #> (those are extracted in the single group analysis.
-$(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
+$(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 	mkdir -p $(1)/nifti ;\
 	bin/extract-all-bricks.sh \
 		$$(dir $$@) \
-		$(1)/headbrik/$(2)+orig.BRIK ;\
+		$(1)/headbrik/$(2)+????.BRIK ;\
 	find $(1)/nifti/ \
 		-mindepth 1 \
 		! -name "*_*-*_*.nii.gz" \
@@ -145,7 +130,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+orig.BRIK
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
-$(1)/headbrik/$(2)+orig.BRIK: \
+$(1)/headbrik/$(2)+????.BRIK: \
 		$(seedsdir)/$(2)*.nii.gz
 	mkdir -p $(1)/headbrik ;\
 	export OMP_NUM_THREADS=1 ;\
@@ -167,7 +152,7 @@ $(1)/headbrik/$(2)+orig.BRIK: \
 		$(pairflag)
 
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
-		$(1)/headbrik/$(2)+orig.BRIK \
+		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz \
 		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
