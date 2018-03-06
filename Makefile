@@ -5,15 +5,15 @@
 #* an unavoidable side-effect.
 
 # Has all the user-set variables like PROJECT_DIR
-include settings.conf
+include analysis/settings.conf
 
 #! Seed directory is where all the seeds are kept for this project. This
 #! directory is the first entry in allseeds.txt
-seedsdir=$(shell head -n1 allseeds.txt)
+seedsdir=$(shell head -n1 analysis/allseeds.txt)
 
 #! Seeds is the list of seeds (w/o extensions, etc). They are the n>1 lines in
 #! allseeds.txt
-allseeds=$(shell tail -n+2 allseeds.txt)
+allseeds=$(shell tail -n+2 analysis/allseeds.txt)
 
 #! What are the groups in this analysis?
 groups=$(patsubst group-%.txt, %, $(wildcard group-[[:alpha:]]*.txt))
