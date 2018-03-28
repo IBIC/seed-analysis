@@ -63,9 +63,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
-$(1)/headbrik/$(2)+????.BRIK: \
-		$(seedsdir)/$(2)*.nii.gz \
-		group-$(1).txt
+$(1)/headbrik/$(2)+????.BRIK: group-$(1).txt
 	mkdir -p $(1)/headbrik ;\
 	export OMP_NUM_THREADS=1 ;\
 	3dttest++ \
@@ -130,8 +128,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
-$(1)/headbrik/$(2)+????.BRIK: \
-		$(seedsdir)/$(2)*.nii.gz
+$(1)/headbrik/$(2)+????.BRIK:
 	mkdir -p $(1)/headbrik ;\
 	export OMP_NUM_THREADS=1 ;\
 	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
