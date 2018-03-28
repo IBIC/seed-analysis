@@ -138,7 +138,7 @@ $(1)/headbrik/$(2)+????.BRIK: \
 	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
 	3dttest++ \
 		-prefix $(1)/headbrik/$(2) \
-		-prefix_clustsim $(1)/headbrik/cs.$(2) \
+		-prefix_clustsim $(1)/headbrik/cc.$(2) \
 		-setA $$$${group1} \
 				$$$$(sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
 					group-$$$${group1}.txt) \
@@ -154,7 +154,7 @@ $(1)/headbrik/$(2)+????.BRIK: \
 $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz \
-		$(1)/headbrik/cs.$(2).CSimA.NN1_1sided.1D
+		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
 	bin/cluster-correct.sh \

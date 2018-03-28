@@ -85,68 +85,65 @@ for brik in $(seq 0 ${maxbrikindex}) ; do
 
 	# If the output file exists, remove it (3dclust doesn't have an -overwrite
 	# option)
-	rm -f ${OUTPUTDIR}/${prefix}_${thislabel}_vals+*.{BRIK,HEAD}
+	# rm -f ${outputprefix}_vals+*.{BRIK,HEAD}
 
 	# Do the cluster correction and save the values to _vals
 	# 3dclust \
 	# 	-NN1 ${ROIsize_voxel} \
 	# 	-1thresh ${Z} \
-	# 	-prefix ${OUTPUTDIR}/${prefix}_${thislabel}_vals \
+	# 	-prefix ${outputprefix}_vals \
 	# 	${inputfile}[${brik}]
 
-	3dAFNItoNIFTI \
-		-prefix ${inputfile}.nii.gz \
-		${inputfile}[${brik}]
-
-	cluster \
-		-z        ${inputfile}.nii.gz  \
-		--zthresh=${Z} \
-		--no_table \
-		--othresh=${OUTPUTDIR}/${prefix}_${thislabel}_vals
+	outputprefix=${OUTPUTDIR}/${prefix}_${thislabel}
 
 	# Extract the Z scr block (we need it either as a "correction failed"
 	# image  or to overlay corrected images on.
 	3dAFNItoNIFTI \
-		-prefix ${OUTPUTDIR}/${prefix}_${thislabel}-temp1.nii.gz \
+		-prefix ${outputprefix}_Z.nii.gz \
 		${inputfile}[${brik}]
 
+	# Run the cluster correction
+	cluster \
+		-z        ${inputfile}.nii.gz  \
+		--zthresh=${Z} \
+		--no_table \
+		--othresh=${outputprefix}_vals
+
+	# 3dAFNItoNIFTI \
+	# 	-prefix ${outputprefix}-temp1.nii.gz \
+	# 	${inputfile}[${brik}]
+
 	# Binarize Zscr vals
-	fslmaths ${OUTPUTDIR}/${prefix}_${thislabel}-temp1.nii.gz \
+	fslmaths ${outputprefix}_Z.nii.gz \
 		-thr 0 -bin \
-		${OUTPUTDIR}/${prefix}_${thislabel}-temp2.nii.gz
+		${outputprefix}_binZ.nii.gz
 
+	# Binarize clusters
+	fslmaths ${outputprefix}_vals.nii.gz \
+		-thr 0 -bin \
+		${outputprefix}_binvals.nii.gz
 
-	# If the output file was created (i.e. there ARE sig. clusters)
-	nfound=$(find ${OUTPUTDIR} \
-				-name "${prefix}_${thislabel}_vals+????.BRIK" | wc -l)
-	if [[ ${nfound} > 0 ]] ; then
-
-		echo "Converting to NIFTI"
-
-		# Convert to NIFTI
-		3dAFNItoNIFTI \
-			-prefix ${OUTPUTDIR}/${prefix}_${thislabel}_sigvals.nii.gz \
-			${OUTPUTDIR}/${prefix}_${thislabel}_vals+*
-
-		rm ${OUTPUTDIR}/${prefix}_${thislabel}_vals+????.{BRIK,HEAD}
-
-		# Binarize values to get binary mask
-		fslmaths ${OUTPUTDIR}/${prefix}_${thislabel}_sigvals.nii.gz \
-			-bin \
-			${OUTPUTDIR}/${prefix}_${thislabel}_sigmask.nii.gz
-
-		# Add binarized sig values to binarized Zmap to get 1=n.s, 2=s.
-		fslmaths ${OUTPUTDIR}/${prefix}_${thislabel}-temp2.nii.gz \
-			-add ${OUTPUTDIR}/${prefix}_${thislabel}_sigmask.nii.gz \
-			${OUTPUTDIR}/${prefix}_${thislabel}.nii.gz
-
-	else
-
-		mv ${OUTPUTDIR}/${prefix}_${thislabel}{-temp1,_clusters}.nii.gz
-
-	fi
+	# Overlay sigvalues (binvals) onto unthresholded map (binZ) to get a mask
+	# where 1 = uncorrected, 2 = corrected
+	fslmaths ${outputprefix}_binZ.nii.gz \
+		-add ${outputprefix}_binvals.nii.gz \
+		${outputprefix}_clusters.nii.gz
 
 done
 
 # Clean up
-rm -f ${OUTPUTDIR}/${prefix}{*temp*,*_sigmask}.nii.gz
+rm -f ${outputprefix}_bin*.nii.gz
+
+#  AFNI
+#   |
+#   V
+#  Zscr nifti (SEED_contrast.nii.gz)
+#   |                             |
+#   V                             V
+# Binarized, uncorrected (_binZ)  Cluster corrected (_vals)
+#                       |          |
+#                       |          V
+#                       |         Binarize (_binvals)
+#  						|		   |
+#                       V          V
+#                      Map (_clusters)

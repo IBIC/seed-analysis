@@ -137,7 +137,7 @@ For example, you could type:
 make SINGLEGROUP_patient
 ```
 
- to create a directory called `patient` with the single group analyses results for the subjects in the file `group_patient.txt`.
+to create a directory called `patient` with the single group analyses results for the subjects in the file `group_patient.txt`.
 
  + Run `GROUPDIFF_<g1>-<g2>`, where `g1` and `g2` are two *different* groups from step 2. This also requires 14 subjects, but between the two groups.
 
