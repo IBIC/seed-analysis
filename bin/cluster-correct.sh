@@ -49,7 +49,7 @@ echo "Max brik index: ${maxbrikindex}"
 
 # Get the minimum cluster size
 # The t-test info is in this 1D file
-ttest=$(dirname ${INPUT})/cs.${prefix}.CSimA.NN1_1sided.1D
+ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN1_1sided.1D
 p05=$(grep "^ 0.050000" ${ttest})
 
 # Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
@@ -88,11 +88,21 @@ for brik in $(seq 0 ${maxbrikindex}) ; do
 	rm -f ${OUTPUTDIR}/${prefix}_${thislabel}_vals+*.{BRIK,HEAD}
 
 	# Do the cluster correction and save the values to _vals
-	3dclust \
-		-NN1 ${ROIsize_voxel} \
-		-1thresh ${Z} \
-		-prefix ${OUTPUTDIR}/${prefix}_${thislabel}_vals \
+	# 3dclust \
+	# 	-NN1 ${ROIsize_voxel} \
+	# 	-1thresh ${Z} \
+	# 	-prefix ${OUTPUTDIR}/${prefix}_${thislabel}_vals \
+	# 	${inputfile}[${brik}]
+
+	3dAFNItoNIFTI \
+		-prefix ${inputfile}.nii.gz \
 		${inputfile}[${brik}]
+
+	cluster \
+		-z        ${inputfile}.nii.gz  \
+		--zthresh=${Z} \
+		--no_table \
+		--othresh=${OUTPUTDIR}/${prefix}_${thislabel}_vals
 
 	# Extract the Z scr block (we need it either as a "correction failed"
 	# image  or to overlay corrected images on.
