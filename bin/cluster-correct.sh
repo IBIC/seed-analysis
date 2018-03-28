@@ -59,77 +59,69 @@ column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
 ROIsize_voxel=$(echo ${p05} | awk "{print \$${column}}")
 echo "ROI size: ${ROIsize_voxel}"
 
-# Loop over each sub-brik and extract it and do cluster correction on it if it's
-# a contrast brik.
-label=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
-for brik in $(seq 0 ${maxbrikindex}) ; do
+# The second brik is always the one that we want - for a single group, it's the
+# Z score, and for a groupdiff, it goes diff, diff z, group 1, group 1 Z ...
+# BRIKs are 0-indexed, so the 2nd is 1
+brik=1
 
-	# If it's not a diff brik, skip it.
-	if [[ ! ${label[${brik}]} =~ ^.*-.*_Zscr$ ]]; then
-		continue
-	fi
-
-	thislabel=$(echo ${label[${brik}]} | sed 's/_Zscr//')
-
+# Get the corresponding label (we need to know whether this is a diff or single
+# group BRIK)
+labels=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
+label=$(echo ${labels[${brik}]} | sed 's/_Zscr//')
+# Degrees of freedom
+if [[ ${label} =~ .*-.* ]] ; then
 	# Get the DoF by counting the number of subjects in each group and
 	# subtracting two (for each group)
-	contrasts=($(echo ${thislabel} | sed -e 's/_Zscr//' -e 's/-/ /'))
+	contrasts=($(echo ${label} | sed 's/-/ /'))
 	dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
-			$(wc -l < group-${contrasts[0]}.txt) - 2 ))
+			$(wc -l < group-${contrasts[1]}.txt) - 2 ))
+else
+	# Degrees of freedom for one group is n	- 1
+	dof=$(( $(wc -l < group-${label}.txt) - 1 ))
+fi
+echo "DoF: ${dof}"
 
-	# Convert from DoF to a Z score using a p-val of <.05 using a 1-sided t-test
-	Z=$(R --no-save --slave <<-EOF
-		cat(qt(.05, ${dof}, lower.tail = FALSE))
-	EOF
-	)
+# Convert from DoF to a Z score using a p-val of <.05 using a 1-sided t-test
+Z=$(R --no-save --slave <<-EOF
+	cat(qt(.05, ${dof}, lower.tail = FALSE))
+EOF
+)
 
-	# If the output file exists, remove it (3dclust doesn't have an -overwrite
-	# option)
-	# rm -f ${outputprefix}_vals+*.{BRIK,HEAD}
+# No need to write out this three-variable prefix every ime
+outputprefix=${OUTPUTDIR}/${prefix}_${label}
 
-	# Do the cluster correction and save the values to _vals
-	# 3dclust \
-	# 	-NN1 ${ROIsize_voxel} \
-	# 	-1thresh ${Z} \
-	# 	-prefix ${outputprefix}_vals \
-	# 	${inputfile}[${brik}]
+# Extract the Z scr block (we need it either as a "correction failed"
+# image  or to overlay corrected images on.
+3dAFNItoNIFTI \
+	-prefix ${outputprefix}_Z.nii.gz \
+	${inputfile}[${brik}]
 
-	outputprefix=${OUTPUTDIR}/${prefix}_${thislabel}
+# Run the cluster correction
+cluster \
+	--zstat=${outputprefix}_Z.nii.gz  \
+	--zthresh=${Z} \
+	--no_table \
+	--othresh=${outputprefix}_vals
 
-	# Extract the Z scr block (we need it either as a "correction failed"
-	# image  or to overlay corrected images on.
-	3dAFNItoNIFTI \
-		-prefix ${outputprefix}_Z.nii.gz \
-		${inputfile}[${brik}]
+# 3dAFNItoNIFTI \
+# 	-prefix ${outputprefix}-temp1.nii.gz \
+# 	${inputfile}[${brik}]
 
-	# Run the cluster correction
-	cluster \
-		-z        ${inputfile}.nii.gz  \
-		--zthresh=${Z} \
-		--no_table \
-		--othresh=${outputprefix}_vals
+# Binarize Zscr vals
+fslmaths ${outputprefix}_Z.nii.gz \
+	-thr 0 -bin \
+	${outputprefix}_binZ.nii.gz
 
-	# 3dAFNItoNIFTI \
-	# 	-prefix ${outputprefix}-temp1.nii.gz \
-	# 	${inputfile}[${brik}]
+# Binarize clusters
+fslmaths ${outputprefix}_vals.nii.gz \
+	-thr 0 -bin \
+	${outputprefix}_binvals.nii.gz
 
-	# Binarize Zscr vals
-	fslmaths ${outputprefix}_Z.nii.gz \
-		-thr 0 -bin \
-		${outputprefix}_binZ.nii.gz
-
-	# Binarize clusters
-	fslmaths ${outputprefix}_vals.nii.gz \
-		-thr 0 -bin \
-		${outputprefix}_binvals.nii.gz
-
-	# Overlay sigvalues (binvals) onto unthresholded map (binZ) to get a mask
-	# where 1 = uncorrected, 2 = corrected
-	fslmaths ${outputprefix}_binZ.nii.gz \
-		-add ${outputprefix}_binvals.nii.gz \
-		${outputprefix}_clusters.nii.gz
-
-done
+# Overlay sigvalues (binvals) onto unthresholded map (binZ) to get a mask
+# where 1 = uncorrected, 2 = corrected
+fslmaths ${outputprefix}_binZ.nii.gz \
+	-add ${outputprefix}_binvals.nii.gz \
+	${outputprefix}_clusters.nii.gz
 
 # Clean up
 rm -f ${outputprefix}_bin*.nii.gz
