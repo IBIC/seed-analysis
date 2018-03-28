@@ -88,7 +88,7 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 
 $(1)/clustcorr/$(2)_$(1)_clusters.png: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
-	slices $$< -o $$@
+	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)*.nii.gz
 
 endef
 
