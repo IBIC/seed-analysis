@@ -86,7 +86,8 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 
 $(1)/clustcorr/$(2)_$(1)_clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
-	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
+	bin/slice-all-that-match.sh \
+		$(1)/clustcorr/$(2)_$(1)_*clusters.nii.gz
 
 endef
 
@@ -158,11 +159,10 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
 
-
-
 $(1)/clustcorr/$(2)_$(1)_clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
-	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
+	bin/slice-all-that-match.sh \
+		$(1)/clustcorr/$(2)_$(1)_*clusters.nii.gz
 
 
 endef

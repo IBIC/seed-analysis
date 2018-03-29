@@ -11,6 +11,7 @@ function usage {
     echo    "OPTIONAL:"
     echo -e "\t-a\tSet custom alpha value (default .5)"
     echo -e "\t-d\tOverride degrees of freedom (calculated by default)"
+    echo -e "\t-k\tKeep intermediate files"
     echo -e "\t-n\tWhich neighbor method (1-3, default 1)"
 }
 
@@ -20,7 +21,7 @@ ALPHA=.05
 # Default clustering method (1-3)
 NMODE=1
 
-while getopts ":a:Dd:hi:n:o:" opt ; do
+while getopts ":a:Dd:hik:n:o:" opt ; do
     case ${opt} in
         a)
             ALPHA=${OPTARG} ;;
@@ -31,7 +32,7 @@ while getopts ":a:Dd:hi:n:o:" opt ; do
                 echo "Override DoF: ${OPTARG}"
                 DEGREESOFFREEDOM=${OPTARG}
             else
-                echo "Illegal degrees of freedom: Must be integer"
+                echo "Illegal degrees of freedom: Must be positive integer"
                 usage
                 exit 1
             fi ;;
@@ -47,6 +48,8 @@ while getopts ":a:Dd:hi:n:o:" opt ; do
                 echo "Input file ${OPTARG}+????.BRIK is missing."
             fi
             ;;
+        k)
+            KEEP="yes" ;;
         o)
             OUTPUTDIR=${OPTARG}
             echo "Output dir is ${OUTPUTDIR}" ;;
@@ -61,7 +64,7 @@ while getopts ":a:Dd:hi:n:o:" opt ; do
     esac
 done
 
-if [[ ${INPUT} == "" ]] || [[ ${OUTPUTDIR} == "" ]]; then
+if [[ ${INPUT} == "" ]] || [[ ${OUTPUTDIR} == "" ]] ; then
     echo "Both input and output dir must be minimally supplied"
     echo
     usage
@@ -114,7 +117,8 @@ if [[ ${DEGREESOFFREEDOM} == "" ]]  ; then
                 $(wc -l < group-${contrasts[1]}.txt) - 2 ))
     else
         # Degrees of freedom for one group is n - 1
-        dof=$(( $(wc -l < group-${label}.txt) - 1 ))
+        group=$(echo ${labels[0]} | sed 's/_mean//')
+        dof=$(( $(wc -l < group-${group}.txt) - 1 ))
     fi
 else
     dof=${DEGREESOFFREEDOM}
@@ -128,7 +132,6 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     # Which label are we working on?
     label=$(echo ${labels[${brik}]} | sed 's/_Zscr//') ; echo -n "${label}"
-    # No need to write out this three-variable prefix every ime
     outputprefix=${OUTPUTDIR}/${prefix}_${label}
 
     # If we're in diff mode and the label doesn't have a - (i.e. it's one of
@@ -137,6 +140,7 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
         echo ": skipping"
         continue
     else
+        # If we didn't echo ": skipping", add a newline for pretty output
         echo
     fi
     echo "DoF: ${dof}"
@@ -186,6 +190,8 @@ EOF
     fi
 
     # Clean up
-    rm -f ${outputprefix}_{keepmap,Z}.nii.gz
+    if [[ ${KEEP} != "yes" ]] ; then
+        rm -f ${outputprefix}_{keepmap,Z}.nii.gz
+    fi
 
 done
