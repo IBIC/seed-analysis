@@ -97,45 +97,36 @@ outputprefix=${OUTPUTDIR}/${prefix}_${label}
     ${inputfile}[${brik}]
 
 # Run the cluster correction
+# Take the input (zstat) image, threshold it at zthresh, and save the thresheld
+# values to othresh, and save a mask with the voxel size to osize.
 cluster \
-    --zstat=${outputprefix}_Z.nii.gz  \
-    --zthresh=${Z} \
-    --no_table \
-    --othresh=${outputprefix}_vals
+        --zstat=${outputprefix}_Z.nii.gz  \
+        --zthresh=${Z} \
+        --othresh=${outputprefix}_clusters \
+        --osize=${outputprefix}_osize \
+    > ${outputprefix}_clusters.txt
 
-# 3dAFNItoNIFTI \
-#   -prefix ${outputprefix}-temp1.nii.gz \
-#   ${inputfile}[${brik}]
+# We need to save only the clusters whose size > $ROIsize_voxel, so create a
+# binary mask with which clusters to save.
+fslmaths \
+    ${outputprefix}_osize \
+    -thr ${ROIsize_voxel} \
+    -bin \
+    ${outputprefix}_keepmap
 
-# Binarize Zscr vals
-fslmaths ${outputprefix}_Z.nii.gz \
-    -thr 0 -bin \
-    ${outputprefix}_binZ.nii.gz
-
-# Binarize clusters
-fslmaths ${outputprefix}_vals.nii.gz \
-    -thr 0 -bin \
-    ${outputprefix}_binvals.nii.gz
-
-# Overlay sigvalues (binvals) onto unthresholded map (binZ) to get a mask
-# where 1 = uncorrected, 2 = corrected
-fslmaths ${outputprefix}_binZ.nii.gz \
-    -add ${outputprefix}_binvals.nii.gz \
+# Mask vals image to only include large enough clusters and then binarize
+# them to create a nice mask
+fslmaths ${outputprefix}_clusters.nii.gz \
+    -mas ${outputprefix}_keepmap \
     ${outputprefix}_clusters.nii.gz
 
-# Clean up
-rm -f ${outputprefix}_bin*.nii.gz
+> ${OUTPUTDIR}/clusters-no.txt
+> ${OUTPUTDIR}/clusters-yes.txt
+if [[ $(fslstats ${outputprefix}_vals.nii.gz -M) == "0.000000 " ]]; then
+    echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-no.txt
+else
+    echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-yes.txt
+fi
 
-#  AFNI
-#   |
-#   V
-#  Zscr nifti (SEED_contrast.nii.gz)
-#   |                             |
-#   V                             V
-# Binarized, uncorrected (_binZ)  Cluster corrected (_vals)
-#                       |          |
-#                       |          V
-#                       |         Binarize (_binvals)
-#                       |          |
-#                       V          V
-#                      Map (_clusters)
+# Clean up
+rm -f ${outputprefix}_{keepmap,Z}.nii.gz

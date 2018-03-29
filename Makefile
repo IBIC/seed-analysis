@@ -51,7 +51,7 @@ SINGLEGROUP_$(1): $(foreach seed,$(allseeds),\
 SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
 								$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz) \
 							$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_clusters.png)
+								$(1)/clustcorr/$(seed)_$(1)_clusters.gif)
 
 #> Convert the mean images from the first subbrick (#0)
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
@@ -84,9 +84,9 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
 
-$(1)/clustcorr/$(2)_$(1)_clusters.png: \
+$(1)/clustcorr/$(2)_$(1)_clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
-	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)*.nii.gz
+	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
 
 endef
 
@@ -111,7 +111,7 @@ GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
 									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz) \
 						$(foreach seed,$(allseeds), \
-									$(1)/clustcorr/$(seed)_$(1)_clusters.png)
+									$(1)/clustcorr/$(seed)_$(1)_clusters.gif)
 
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
@@ -159,9 +159,9 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		-o $(1)/clustcorr
 
 
-$(1)/clustcorr/$(2)_$(1)_clusters.png: \
+$(1)/clustcorr/$(2)_$(1)_clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
-	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)*.nii.gz
+	bin/slice-all-that-match.sh $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
 
 
 endef
