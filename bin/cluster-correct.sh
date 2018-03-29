@@ -62,71 +62,77 @@ echo "ROI size: ${ROIsize_voxel}"
 # The second brik is always the one that we want - for a single group, it's the
 # Z score, and for a groupdiff, it goes diff, diff z, group 1, group 1 Z ...
 # BRIKs are 0-indexed, so the 2nd is 1
-brik=1
+# brik=1
 
 # Get the corresponding label (we need to know whether this is a diff or single
 # group BRIK)
 labels=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
-label=$(echo ${labels[${brik}]} | sed 's/_Zscr//')
-# Degrees of freedom
-if [[ ${label} =~ .*-.* ]] ; then
-    # Get the DoF by counting the number of subjects in each group and
-    # subtracting two (for each group)
-    contrasts=($(echo ${label} | sed 's/-/ /'))
-    dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
-            $(wc -l < group-${contrasts[1]}.txt) - 2 ))
-else
-    # Degrees of freedom for one group is n - 1
-    dof=$(( $(wc -l < group-${label}.txt) - 1 ))
-fi
-echo "DoF: ${dof}"
 
-# Convert from DoF to a Z score using a p-val of <.05 using a 1-sided t-test
+# Loop over every other brik, Zscr bricks are all the odd briks
+for brik in $(seq 1 2 ${maxbrikindex}) ; do
+
+    label=$(echo ${labels[${brik}]} | sed 's/_Zscr//')
+    echo ${label} ; continue
+    # Degrees of freedom
+    if [[ ${label} =~ .*-.* ]] ; then
+        # Get the DoF by counting the number of subjects in each group and
+        # subtracting two (for each group)
+        contrasts=($(echo ${label} | sed 's/-/ /'))
+        dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
+                $(wc -l < group-${contrasts[1]}.txt) - 2 ))
+    else
+        # Degrees of freedom for one group is n - 1
+        dof=$(( $(wc -l < group-${label}.txt) - 1 ))
+    fi
+    echo "DoF: ${dof}"
+
+    # Convert from DoF to a Z score using a p-val of <.05 using a 1-sided t-test
 Z=$(R --no-save --slave <<-EOF
     cat(qt(.05, ${dof}, lower.tail = FALSE))
 EOF
 )
+    # No need to write out this three-variable prefix every ime
+    outputprefix=${OUTPUTDIR}/${prefix}_${label}
 
-# No need to write out this three-variable prefix every ime
-outputprefix=${OUTPUTDIR}/${prefix}_${label}
+    # Extract the Z scr block (we need it either as a "correction failed"
+    # image  or to overlay corrected images on.
+    3dAFNItoNIFTI \
+        -prefix ${outputprefix}_Z.nii.gz \
+        ${inputfile}[${brik}]
 
-# Extract the Z scr block (we need it either as a "correction failed"
-# image  or to overlay corrected images on.
-3dAFNItoNIFTI \
-    -prefix ${outputprefix}_Z.nii.gz \
-    ${inputfile}[${brik}]
+    # Run the cluster correction
+    # Take the input (zstat) image, threshold it at zthresh, and save the thresheld
+    # values to othresh, and save a mask with the voxel size to osize.
+    cluster \
+            --zstat=${outputprefix}_Z.nii.gz  \
+            --zthresh=${Z} \
+            --othresh=${outputprefix}_clusters \
+            --osize=${outputprefix}_osize \
+        > ${outputprefix}_clusters.txt
 
-# Run the cluster correction
-# Take the input (zstat) image, threshold it at zthresh, and save the thresheld
-# values to othresh, and save a mask with the voxel size to osize.
-cluster \
-        --zstat=${outputprefix}_Z.nii.gz  \
-        --zthresh=${Z} \
-        --othresh=${outputprefix}_clusters \
-        --osize=${outputprefix}_osize \
-    > ${outputprefix}_clusters.txt
+    # We need to save only the clusters whose size > $ROIsize_voxel, so create a
+    # binary mask with which clusters to save.
+    fslmaths \
+        ${outputprefix}_osize \
+        -thr ${ROIsize_voxel} \
+        -bin \
+        ${outputprefix}_keepmap
 
-# We need to save only the clusters whose size > $ROIsize_voxel, so create a
-# binary mask with which clusters to save.
-fslmaths \
-    ${outputprefix}_osize \
-    -thr ${ROIsize_voxel} \
-    -bin \
-    ${outputprefix}_keepmap
+    # Mask vals image to only include large enough clusters and then binarize
+    # them to create a nice mask
+    fslmaths ${outputprefix}_clusters.nii.gz \
+        -mas ${outputprefix}_keepmap \
+        ${outputprefix}_clusters.nii.gz
 
-# Mask vals image to only include large enough clusters and then binarize
-# them to create a nice mask
-fslmaths ${outputprefix}_clusters.nii.gz \
-    -mas ${outputprefix}_keepmap \
-    ${outputprefix}_clusters.nii.gz
+    > ${OUTPUTDIR}/clusters-no.txt
+    > ${OUTPUTDIR}/clusters-yes.txt
+    if [[ $(fslstats ${outputprefix}_clusters.nii.gz -M) == "0.000000 " ]]; then
+        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-no.txt
+    else
+        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-yes.txt
+    fi
 
-> ${OUTPUTDIR}/clusters-no.txt
-> ${OUTPUTDIR}/clusters-yes.txt
-if [[ $(fslstats ${outputprefix}_vals.nii.gz -M) == "0.000000 " ]]; then
-    echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-no.txt
-else
-    echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-yes.txt
-fi
+    # Clean up
+    rm -f ${outputprefix}_{keepmap,Z}.nii.gz
 
-# Clean up
-rm -f ${outputprefix}_{keepmap,Z}.nii.gz
+done
