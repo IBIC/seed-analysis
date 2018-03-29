@@ -1,20 +1,23 @@
 #!/bin/bash
 
 function usage {
-    echo "./${0} [-a A] -i <input prefix> -o <output dir>"
+    echo "./${0} [-a A] [-d] -i <input prefix> -o <output dir>"
     echo
     echo -e "\t-i\tInput prefix. Path to HEAD/BRIK w/o +{orig,tlrc}.{HEAD,BRIK}"
     echo -e "\t-o\tOutput directory"
     echo -e "\t-a\tOPTIONAL, set custom alpha value (default .5)"
+    echo -e "\t-d\tOPTIONAL, get group diff sub briks only"
 }
 
 # Default alpha value
 ALPHA=.05
 
-while getopts ":a:i:o:" opt ; do
+while getopts ":a:di:o:" opt ; do
     case ${opt} in
         a)
             ALPHA=${OPTARG} ;;
+        d)
+            DIFFMODE="yes" ;;
         i)
             # Check that input file exists
             if find . -wholename "${INPUT}+????.BRIK" ; then
@@ -68,31 +71,45 @@ echo "ROI size: ${ROIsize_voxel}"
 # group BRIK)
 labels=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
 
+# Get the DoF differentially based on whether this is a group or single-group
+# analysis
+if [[ ${DIFFMODE} == "yes" ]] ; then
+    # Get the DoF by counting the number of subjects in each group and
+    # subtracting two (for each group)
+    contrasts=($(echo ${labels[0]} | sed -e 's/_mean//' -e 's/-/ /'))
+    dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
+            $(wc -l < group-${contrasts[1]}.txt) - 2 ))
+else
+    # Degrees of freedom for one group is n - 1
+    dof=$(( $(wc -l < group-${label}.txt) - 1 ))
+fi
+
 # Loop over every other brik, Zscr bricks are all the odd briks
+# Clear the files that keep track of which clusters are good/nonexistent
+> ${OUTPUTDIR}/clusters-no.txt
+> ${OUTPUTDIR}/clusters-yes.txt
 for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
-    label=$(echo ${labels[${brik}]} | sed 's/_Zscr//')
-    echo ${label} ; continue
-    # Degrees of freedom
-    if [[ ${label} =~ .*-.* ]] ; then
-        # Get the DoF by counting the number of subjects in each group and
-        # subtracting two (for each group)
-        contrasts=($(echo ${label} | sed 's/-/ /'))
-        dof=$(( $(wc -l < group-${contrasts[0]}.txt) + \
-                $(wc -l < group-${contrasts[1]}.txt) - 2 ))
-    else
-        # Degrees of freedom for one group is n - 1
-        dof=$(( $(wc -l < group-${label}.txt) - 1 ))
+    # Which label are we working on?
+    label=$(echo ${labels[${brik}]} | sed 's/_Zscr//') ; echo ${label}
+    # No need to write out this three-variable prefix every ime
+    outputprefix=${OUTPUTDIR}/${prefix}_${label}
+
+    # If we're in diff mode and the label doesn't have a - (i.e. it's one of
+    # the single-groups, skip it)
+    if ! [[ ${label} =~ .*-.* ]] && [[ ${DIFFMODE} == "yes" ]] ; then
+        echo " - Skip ${label}"
+        continue
     fi
     echo "DoF: ${dof}"
 
-    # Convert from DoF to a Z score using a p-val of <.05 using a 1-sided t-test
-Z=$(R --no-save --slave <<-EOF
-    cat(qt(.05, ${dof}, lower.tail = FALSE))
+    # Convert from DoF to a Z score using a p-val of <.05 using a 1-sided
+    # t-test
+    # Unfortunately, EOF) has to be unindented awkwardly like this.
+    Z=$(R --no-save --slave <<-EOF
+        cat(qt(.05, ${dof}, lower.tail = FALSE))
 EOF
 )
-    # No need to write out this three-variable prefix every ime
-    outputprefix=${OUTPUTDIR}/${prefix}_${label}
 
     # Extract the Z scr block (we need it either as a "correction failed"
     # image  or to overlay corrected images on.
@@ -101,8 +118,8 @@ EOF
         ${inputfile}[${brik}]
 
     # Run the cluster correction
-    # Take the input (zstat) image, threshold it at zthresh, and save the thresheld
-    # values to othresh, and save a mask with the voxel size to osize.
+    # Take the input (zstat) image, threshold it at zthresh, and save the
+    # thresheld values to othresh, and save a mask with the voxel size to osize.
     cluster \
             --zstat=${outputprefix}_Z.nii.gz  \
             --zthresh=${Z} \
@@ -118,14 +135,12 @@ EOF
         -bin \
         ${outputprefix}_keepmap
 
-    # Mask vals image to only include large enough clusters and then binarize
-    # them to create a nice mask
+    # Mask clusters image to only include large enough clusters and then
+    # binarize them to create a nice mask
     fslmaths ${outputprefix}_clusters.nii.gz \
         -mas ${outputprefix}_keepmap \
         ${outputprefix}_clusters.nii.gz
 
-    > ${OUTPUTDIR}/clusters-no.txt
-    > ${OUTPUTDIR}/clusters-yes.txt
     if [[ $(fslstats ${outputprefix}_clusters.nii.gz -M) == "0.000000 " ]]; then
         echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-no.txt
     else

@@ -154,9 +154,10 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
-	bin/cluster-correct.sh \
+	bin/cluster-correct.sh -d \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
+
 
 
 $(1)/clustcorr/$(2)_$(1)_clusters.gif: \
