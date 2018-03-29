@@ -122,7 +122,7 @@ fslmaths ${outputprefix}_clusters.nii.gz \
 
 > ${OUTPUTDIR}/clusters-no.txt
 > ${OUTPUTDIR}/clusters-yes.txt
-if [[ $(fslstats ${outputprefix}_vals.nii.gz -M) == "0.000000 " ]]; then
+if [[ $(fslstats ${outputprefix}_clusters.nii.gz -M) == "0.000000 " ]]; then
     echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-no.txt
 else
     echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-yes.txt
