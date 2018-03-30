@@ -168,7 +168,7 @@ $(1)/clustcorr/$(2)_$(1)_clusters.gif: \
 endef
 
 # Expand over the group list twice to create the recipes for every combination
-# of groups. This makes things like A-A, which would be 0, of course.
+# of groups.
 $(foreach contrast,$(contrasts), \
 	$(foreach seed,$(allseeds), \
 		$(eval $(call twogroup,$(contrast),$(seed)))))

@@ -21,7 +21,7 @@ ALPHA=.05
 # Default clustering method (1-3)
 NMODE=1
 
-while getopts ":a:Dd:hik:n:o:" opt ; do
+while getopts ":a:Dd:hi:kn:o:" opt ; do
     case ${opt} in
         a)
             ALPHA=${OPTARG} ;;
