@@ -15,8 +15,18 @@ seedsdir=$(shell head -n1 analysis/allseeds.txt)
 #! allseeds.txt
 allseeds=$(shell tail -n+2 analysis/allseeds.txt)
 
+# Check to make sure there are no hyphens in seed names, they'll muck things up
+ifneq ($(findstring -,$(allseeds)),)
+$(error Hyphen in one or more seed name(s))
+endif
+
 #! What are the groups in this analysis?
 groups=$(patsubst group-%.txt, %, $(wildcard group-[[:alpha:]]*.txt))
+
+# Check to make sure there are no hyphens in group names, they'll muck things up
+ifneq ($(findstring -,$(groups)),)
+$(error Hyphen in one or more group name(s))
+endif
 
 #! Generate the list of contrasts based on the given groups. Filters out any
 #! matching contrats (like A-A).
@@ -29,6 +39,10 @@ ifeq ($(COVFILE),)
 covariate=
 else
 covariate=-covariates $(COVFILE)
+covariatenames=$(shell head -n1 $(COVFILE))
+ifneq ($(findstring -,$(covariatenames)),)
+$(error Hyphen in one or more covariate name(s))
+endif
 endif
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
