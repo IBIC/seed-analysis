@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage {
-    echo "./${0} [-a A] [-Ddh] [-n N] -i <input prefix> -o <output dir>"
+    echo "./${0} [-a A] [-Ddh] [-n N] [-1/2] -i <input prefix> -o <output dir>"
     echo
     echo -e "\t-i\tInput prefix. Path to HEAD/BRIK w/o +{orig,tlrc}.{HEAD,BRIK}"
     echo -e "\t-o\tOutput directory"
@@ -9,8 +9,11 @@ function usage {
     echo -e "->\t-D\tGROUP MODE toggle"
     echo
     echo    "OPTIONAL:"
+    echo -e "\t-1\tUse a 1-sided t-test (default)"
+    echo -e "\t-2\tUse a 2-sided t-test"
     echo -e "\t-a\tSet custom alpha value (default .5)"
     echo -e "\t-d\tOverride degrees of freedom (calculated by default)"
+    echo -e "\t-h\tDisplay this help menu"
     echo -e "\t-k\tKeep intermediate files"
     echo -e "\t-n\tWhich neighbor method (1-3, default 1)"
 }
@@ -21,8 +24,17 @@ ALPHA=.05
 # Default clustering method (1-3)
 NMODE=3
 
-while getopts ":a:Dd:hi:kn:o:" opt ; do
+# Default t-test sidedness; 1 is more conservative than 2
+SIDED=1
+
+while getopts ":12a:Dd:hi:kn:o:" opt ; do
     case ${opt} in
+        1)
+            SIDED=1
+            echo "Using 1-sided t-test (default)" ;;
+        2)
+            SIDED=2
+            echo "Using 2-sided t-test" ;;
         a)
             ALPHA=${OPTARG} ;;
         D)
@@ -87,8 +99,10 @@ echo "Max brik index: ${maxbrikindex}"
 
 # Get the minimum cluster size
 # The t-test info is in this 1D file
-ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_2sided.1D
+ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_${SIDED}sided.1D
 p05=$(grep "^ 0.050000" ${ttest})
+
+# echo ${ttest} ; exit
 
 # Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
 column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
