@@ -4,12 +4,22 @@ Abstracted system for doing seed-based correlation analysis with any given set o
 
 ## How to setup this pipeline for any project.
 
-Below is a general guide to setting up this pipeline for any project. We assume that you will clone this repository and, in that directory, follow these instructions.
+Below is a general guide to setting up this pipeline for any project.
+We assume that you will clone this repository and, in that directory,
+follow these instructions.
+
+*Important*: Do not use a hyphen (`-`) in group, seed, or covariate names.
+Or anywhere, really. The system relies in many places on hyphens being used exclusively to
+identify contrasts (e.g. `patient-control`). I have built in a few first-order
+checks against hyphens in bad places, but the system will fail spectacularly if
+there are hyphens in unexpected places.
 
 ### 1. Create list of seeds
 
-The makefile requires that the list of seeds and their locations be read in from a file. That file must be named `allseeds.txt` and be located in the top-level `analysis`
-directory and have the project seed directory, and all the seeds used in the project listed in a single column like so:
+The makefile requires that the list of seeds and their locations be read in
+from a file. That file *must* be named `allseeds.txt` and be located in the
+top-level `analysis` directory and have the project seed directory, and all
+the seeds used in the project listed in a single column like so:
 
     /mnt/praxic/pdnetworksr01/lib/SVC_seeds/
     DANRaIPS
@@ -18,63 +28,89 @@ directory and have the project seed directory, and all the seeds used in the pro
     DANLFEF
 	...
 
-The makefile reads from the directory listed in the first line and looks for the seeds on the `n>1` lines. These seeds can have any notes following the seed name in the file name, but must have an `.nii.gz` extension. For example, `DANRaIPS_sphereroi.nii.gz` is acceptable, but `ROI_DANRaIPS.nii` wouldn't be.
+The makefile reads from the directory listed in the first line and looks for
+the seeds on the `n>1` lines. These seeds can have any notes following the
+seed name in the file name, but must have an `.nii.gz` extension.
+For example, `DANRaIPS_sphereroi.nii.gz` is acceptable, but
+`ROI_DANRaIPS.nii` wouldn't be.
 
-**Important**: All seeds must be generated for all subjects (see next section). If they aren't, the t-test for any seed where one or more subjects is missing the file will fail.
+In other words, the DANRaIPS seed must match the file glob `DANRaIPS*.nii.gz`.
 
+**Important**: All seeds must be generated for all subjects (see next section).
+If they aren't, the t-test for any seed where one or more subjects is missing
+the file will fail (with an error from `3dttest++`).
 
 ### 2. Create `group-*.txt` group files
 
-The makefile identifies groups by looking for files that match the regex `group-[[:alpha:]]*.txt`. For example, these files would create the groups "control" and "patient."
+The makefile identifies groups by looking for files that match the regex
+`group-[[:alpha:]]*.txt`. For example, these files would create the groups
+"control" and "patient."
 
 	group-control.txt
 	group-patient.txt
 	Makefile
 
-Please ensure that there are no other files matching this pattern in the working directory. Do not use "`-`" within group names (i.e., within "control" or "patient", because a hyphen is used by the macros to indicate contrasts.
+Please ensure that there are no other files matching this pattern in the
+working directory. *Reminder*: Do not use "`-`" in group names.
 
 Group files must contain lines the following format:
 
 	140593 /mnt/praxic/pdnetworksr01/subjects/140593/session1/mcvsa/SVC_MEICA/
 	140605 /mnt/praxic/pdnetworksr01/subjects/140605/session1/mcvsa/SVC_MEICA/
 
-Each line consists of a subject identifier, followed by a space, then followed by the absolute path to the seed-based connectivity maps for that subject. It is important to label each subject because the syntax of `3dttest++` requires each map to be labeled with a subject identifier.
+Each line consists of a subject identifier, followed by a space, then followed
+by the absolute path to the seed-based connectivity maps for that subject. It
+is important to label each subject because the syntax of `3dttest++` requires
+each map to be labeled with a subject identifier.
 
-For info on the `[[:alpha:]]` syntax, see [this page](https://www.regular-expressions.info/posixbrackets.html). It is equivalent to `[a-zA-Z]`.
+For info on the `[[:alpha:]]` syntax, see
+[this page](https://www.regular-expressions.info/posixbrackets.html).
+It is equivalent to `[a-zA-Z]`.
 
-**Important**: All of these directories must contain all of the required files. `3dttest++` will choke if it is given a non-existent file, and will not continue without it. I suggest you create a script to manage the creation of these files based on the existence of the map directories.
+**Important**: All of these directories must contain all of the required files.
+`3dttest++` will choke if it is given a non-existent file, and will not
+continue without it. I suggest you create a script to manage the creation of
+these files based on the existence of the map directories.
 
 ### 3. Set variables
 
-The first fifty or so lines of the makefileset a number of variables for `make` execution. There are three kinds of variables in the makefile:
+The first fifty or so lines of the makefile set a number of variables for
+`make` execution. **However**, all the project-specific variables are set in the
+auxiliary file `analysis/settings.conf`.
 
----
+In general, the convention is ALL_CAPS variables should be modified on a project
+basis and left alone. PascalCase variables can be given a default, but can be
+overridden on the command line (any variable can be so overridden, but these are
+likely to be.) lowercase variables should not be modified.
 
-**`ALL_CAPS`: These variables need to be set on a per-projecct basis**
-
-1. `PROJECT_DIR`: The top-level directory for your project (in IBIC standard convention, this contains `bin/`, `subjects/`, etc.)
-4. `STANDARD_MASK`: The MNI-space mask used in `3dttest++`. Using a mask reduces the number of comparisons and speeds up processing. Make sure the resolution (`Xmm`) matches the space your files are registered to. **Default:** 2mm
-5. `SVCSUFFIX`: Depending on how `meica` was set up, the maps aren't necessarily given consistent names. Set this to whatever your project chose as the output. We're looking for the Z-transformed correlation map.
-6. `COVFILE`: The covariates file (see section `XXX`) to read from. Leave blank if there are no covariates.
-
----
-
-**`PascalCase`: These variables have set defaults but can be overriden on the command line.**
-
-To override the default value of these variables, simply set a new value for them on the command line, like so:
+To override the default value of the PascalCase variables, simply set a new
+value for them on the command line, like so:
 
     make SINGLEGROUP_PD ANALYSIS=-ETAC`
 
-1. `Analysis`: Which type of `3dttest++` test to use. Available options are `ETAC` or `Clustsim`. Note that the number of cores can be specified as an argument to these flags, or left off to use all available cores. **Important:** The leading dash must be included.
-2. `Paired`: By default, an unpaired t-test is executed. To do a paired t-test, changed the value of `Paired` to anything other than the empty string. `3dttest++` will fail if your subject lists aren't properly paired.
-
-`COVFILE`, like any other variable, can also be modified from the command line, but I'm leaving it in as a permanent variable because all covariates must be in that one file (see section 5).
-
+settings.conf
 ---
 
-**`lowercase`: These variables are automatically created variables.**
+1. `PROJECT_DIR`: The top-level directory for your project (in IBIC standard
+convention, this contains `bin/`, `subjects/`, etc.)
+2. `STANDARD_MASK`: The MNI-space mask used in `3dttest++`. Using a mask
+reduces the number of comparisons and speeds up processing. Make sure the
+resolution (`Xmm`) matches the space your files are registered to.
+**Default:** 2mm
+3. `SVCSUFFIX`: Depending on how `meica` was set up, the maps aren't necessarily
+given consistent names. Set this to whatever your project chose as the output.
+We're looking for the Z-transformed correlation map.
+4. `COVFILE`: The covariates file (see section `XXX`) to read from. Leave blank
+if there are no covariates.
+5. `ANALYSIS`: Which type of `3dttest++` test to use. Available options are
+`-ETAC` or `-Clustsim`. Note that the number of cores can be specified as an
+argument to these flags, or left off to use all available cores.
+**Important:** The leading dash must be included.
 
-In general, they shouldn't be overwritten, especially the variables in *italics*.
+Makefile
+---
+
+2. `Paired`: By default, an unpaired t-test is executed. To do a paired t-test, changed the value of `Paired` to anything other than the empty string. `3dttest++` will fail if your subject lists aren't properly paired.
 
 1. `seedsdir`: This variable is read in from the first lne of `allseeds.txt` and contains all the ROIs used in later analyses.
 2. `allseeds`: By default, all the seeds are read in from the file `allseeds` (see section 1). This can be overriden here if you have another method to identify the names of the seeds.
