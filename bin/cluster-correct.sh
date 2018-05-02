@@ -19,7 +19,7 @@ function usage {
 ALPHA=.05
 
 # Default clustering method (1-3)
-NMODE=1
+NMODE=3
 
 while getopts ":a:Dd:hi:kn:o:" opt ; do
     case ${opt} in
@@ -87,7 +87,7 @@ echo "Max brik index: ${maxbrikindex}"
 
 # Get the minimum cluster size
 # The t-test info is in this 1D file
-ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_1sided.1D
+ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_2sided.1D
 p05=$(grep "^ 0.050000" ${ttest})
 
 # Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
