@@ -19,6 +19,7 @@ for i in ${input} ; do
 		${i} 0.1 ${max} \
 		${output}-overlay.nii.gz
 
+	# If the overlay image failes for whatever reason, give a nice error.
 	if ! [[ -e ${output}-overlay.nii.gz ]] ; then
 		echo "Overlay image not created, input must be empty"
 		exit

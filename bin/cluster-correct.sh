@@ -196,6 +196,7 @@ EOF
         -mul -1 -thr 0.000001 \
         ${outputprefix}_Z-inv.nii.gz
 
+    # Run cluster on the inverted, treshheld data.
     cluster \
         --zstat=${outputprefix}_Z-inv.nii.gz  \
         --zthresh=${Z} \
@@ -206,29 +207,25 @@ EOF
     # Remove it here before we forget
     rm ${outputprefix}_Z-inv.nii.gz
 
-    # We need to save only the clusters whose size > $ROIsize_voxel, so create a
-    # binary mask with which clusters to save.
-    fslmaths \
-        ${outputprefix}_pososize \
-        -thr ${ROIsize_voxel} \
-        -bin \
-        ${outputprefix}_poskeepmap
+    # The following steps are the same for both negative and positive, so wrap
+    # in a for loop for conciseness
+    for sign in neg pos ; do
 
-    fslmaths \
-        ${outputprefix}_negosize \
-        -thr ${ROIsize_voxel} \
-        -bin \
-        ${outputprefix}_negkeepmap
+        # We need to save only the clusters whose size > $ROIsize_voxel, so
+        # create a binary mask with which clusters to save for both directions.
+        fslmaths \
+            ${outputprefix}_${sign}osize \
+            -thr ${ROIsize_voxel} \
+            -bin \
+            ${outputprefix}_${sign}keepmap
 
-    # Mask clusters image to only include large enough clusters and then
-    # binarize them to create a nice mask
-    fslmaths ${outputprefix}_posclusters.nii.gz \
-        -mas ${outputprefix}_poskeepmap \
-        ${outputprefix}_posclusters.nii.gz
+        # Mask clusters image to only include large enough clusters and then
+        # binarize them to create a nice mask
+        fslmaths ${outputprefix}_${sign}clusters.nii.gz \
+            -mas ${outputprefix}_${sign}keepmap \
+            ${outputprefix}_${sign}clusters.nii.gz
 
-    fslmaths ${outputprefix}_negclusters.nii.gz \
-        -mas ${outputprefix}_negkeepmap \
-        ${outputprefix}_negclusters.nii.gz
+    done
 
     if [[ $(fslstats ${outputprefix}_posclusters.nii.gz -M) == "0.000000 " ]]
     then

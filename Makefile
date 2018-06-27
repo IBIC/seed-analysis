@@ -94,6 +94,8 @@ $(1)/headbrik/$(2)+????.BRIK: group-$(1).txt
 		$(Analysis) \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
+#> Create the NIFTI files with the clusters that survive correction
+# (cluster-correct.sh creates both.)
 $(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
 $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
@@ -103,15 +105,11 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
 
-$(1)/clustcorr/$(2)_$(1)_posclusters.gif: \
-		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
+#> Make a slice of the clusters images - pattern matching works here
+$(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
+		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
-
-$(1)/clustcorr/$(2)_$(1)_negclusters.gif: \
-		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
-	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)_$*clusters.nii.gz
 
 endef
 
@@ -177,6 +175,8 @@ $(1)/headbrik/$(2)+????.BRIK:
 		$(Analysis) \
 		$(pairflag)
 
+#> Create the NIFTI files with the clusters that survive correction
+# (cluster-correct.sh creates both.)
 $(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
 $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
@@ -188,16 +188,11 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
 
-$(1)/clustcorr/$(2)_$(1)_posclusters.gif: \
-		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
+#> Make a slice of the clusters images - pattern matching works here
+$(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
+		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
-
-$(1)/clustcorr/$(2)_$(1)_negclusters.gif: \
-		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
-	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
-
+		$(1)/clustcorr/$(2)_$(1)_$*clusters.nii.gz
 
 endef
 
@@ -215,6 +210,7 @@ $(foreach contrast,$(contrasts), \
 
 .SECONDARY:
 
+#? This will run everything the makefile can do.
 EVERYTHING: $(foreach contrast,$(contrasts), \
 				GROUPDIFF_${contrast})) \
 		$(foreach group,$(groups), \
