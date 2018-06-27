@@ -140,8 +140,10 @@ fi
 
 # Loop over every other brik, Zscr bricks are all the odd briks
 # Clear the files that keep track of which clusters are good/nonexistent
-> ${OUTPUTDIR}/clusters-no.txt
-> ${OUTPUTDIR}/clusters-yes.txt
+> ${OUTPUTDIR}/pos-clusters-no.txt
+> ${OUTPUTDIR}/pos-clusters-yes.txt
+> ${OUTPUTDIR}/neg-clusters-no.txt
+> ${OUTPUTDIR}/neg-clusters-yes.txt
 for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     # Which label are we working on?
@@ -177,35 +179,74 @@ EOF
     # Take the input (zstat) image, threshold it at zthresh, and save the
     # thresheld values to othresh, and save a mask with the voxel size to osize.
     cluster \
-            --zstat=${outputprefix}_Z.nii.gz  \
-            --zthresh=${Z} \
-            --othresh=${outputprefix}_clusters \
-            --osize=${outputprefix}_osize \
-        > ${outputprefix}_clusters.txt
+        --zstat=${outputprefix}_Z.nii.gz  \
+        --zthresh=${Z} \
+        --othresh=${outputprefix}_posclusters \
+        --osize=${outputprefix}_pososize \
+    > ${outputprefix}_posclusters.txt
+
+    # Cluster doesn't seem to like clustering negative values, so invert the
+    # Z map, then cluster
+
+    # For some reason, when you multiply by -1, you get a minimum value of -0,
+    # which screws up later processing. Here, we threshold at the lowest value
+    # possible to get back to a minimum of regular 0.
+    fslmaths \
+        ${outputprefix}_Z.nii.gz \
+        -mul -1 -thr 0.000001 \
+        ${outputprefix}_Z-inv.nii.gz
+
+    cluster \
+        --zstat=${outputprefix}_Z-inv.nii.gz  \
+        --zthresh=${Z} \
+        --othresh=${outputprefix}_negclusters \
+        --osize=${outputprefix}_negosize \
+    > ${outputprefix}_negclusters.txt
+
+    # Remove it here before we forget
+    rm ${outputprefix}_Z-inv.nii.gz
 
     # We need to save only the clusters whose size > $ROIsize_voxel, so create a
     # binary mask with which clusters to save.
     fslmaths \
-        ${outputprefix}_osize \
+        ${outputprefix}_pososize \
         -thr ${ROIsize_voxel} \
         -bin \
-        ${outputprefix}_keepmap
+        ${outputprefix}_poskeepmap
+
+    fslmaths \
+        ${outputprefix}_negosize \
+        -thr ${ROIsize_voxel} \
+        -bin \
+        ${outputprefix}_negkeepmap
 
     # Mask clusters image to only include large enough clusters and then
     # binarize them to create a nice mask
-    fslmaths ${outputprefix}_clusters.nii.gz \
-        -mas ${outputprefix}_keepmap \
-        ${outputprefix}_clusters.nii.gz
+    fslmaths ${outputprefix}_posclusters.nii.gz \
+        -mas ${outputprefix}_poskeepmap \
+        ${outputprefix}_posclusters.nii.gz
 
-    if [[ $(fslstats ${outputprefix}_clusters.nii.gz -M) == "0.000000 " ]]; then
-        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-no.txt
+    fslmaths ${outputprefix}_negclusters.nii.gz \
+        -mas ${outputprefix}_negkeepmap \
+        ${outputprefix}_negclusters.nii.gz
+
+    if [[ $(fslstats ${outputprefix}_posclusters.nii.gz -M) == "0.000000 " ]]
+    then
+        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/pos-clusters-no.txt
     else
-        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/clusters-yes.txt
+        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/pos-clusters-yes.txt
+    fi
+
+    if [[ $(fslstats ${outputprefix}_negclusters.nii.gz -M) == "0.000000 " ]]
+    then
+        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/neg-clusters-no.txt
+    else
+        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/neg-clusters-yes.txt
     fi
 
     # Clean up
     if [[ ${KEEP} != "yes" ]] ; then
-        rm -f ${outputprefix}_{keepmap,Z}.nii.gz
+        rm -f ${outputprefix}_*{keepmap,Z,osize}.nii.gz
     fi
 
 done

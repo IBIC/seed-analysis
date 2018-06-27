@@ -19,9 +19,14 @@ for i in ${input} ; do
 		${i} 0.1 ${max} \
 		${output}-overlay.nii.gz
 
-	slices \
-		${output}-overlay.nii.gz \
-		-o ${output}.gif
+	if ! [[ -e ${output}-overlay.nii.gz ]] ; then
+		echo "Overlay image not created, input must be empty"
+		exit
+	else
+		slices \
+			${output}-overlay.nii.gz \
+			-o ${output}.gif
+	fi
 
 	rm -f $(dirname ${i})/${bn}-overlay.nii.gz
 done

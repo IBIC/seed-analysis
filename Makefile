@@ -63,9 +63,13 @@ SINGLEGROUP_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
 SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz) \
+								$(1)/clustcorr/$(seed)_$(1)_posclusters.nii.gz) \
 							$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_clusters.gif)
+								$(1)/clustcorr/$(seed)_$(1)_negclusters.nii.gz) \
+							$(foreach seed,$(allseeds), \
+								$(1)/clustcorr/$(seed)_$(1)_posclusters.gif) \
+							$(foreach seed,$(allseeds), \
+								$(1)/clustcorr/$(seed)_$(1)_negclusters.gif)
 
 #> Convert the mean images from the first subbrick (#0)
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
@@ -90,7 +94,8 @@ $(1)/headbrik/$(2)+????.BRIK: group-$(1).txt
 		$(Analysis) \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
-$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
+$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
+$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
 	mkdir -p $(1)/clustcorr ;\
@@ -98,10 +103,15 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
 
-$(1)/clustcorr/$(2)_$(1)_clusters.gif: \
-		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
+$(1)/clustcorr/$(2)_$(1)_posclusters.gif: \
+		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
+
+$(1)/clustcorr/$(2)_$(1)_negclusters.gif: \
+		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
+	bin/slice-all-that-match.sh \
+		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
 
 endef
 
@@ -124,13 +134,17 @@ GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
 GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-									$(1)/clustcorr/$(seed)_$(1)_clusters.nii.gz) \
+								$(1)/clustcorr/$(seed)_$(1)_posclusters.nii.gz) \
 						$(foreach seed,$(allseeds), \
-									$(1)/clustcorr/$(seed)_$(1)_clusters.gif)
+								$(1)/clustcorr/$(seed)_$(1)_negclusters.nii.gz) \
+						$(foreach seed,$(allseeds), \
+								$(1)/clustcorr/$(seed)_$(1)_posclusters.gif) \
+						$(foreach seed,$(allseeds), \
+								$(1)/clustcorr/$(seed)_$(1)_negclusters.gif)
 
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
-#> (those are extracted in the single group analysis.
+#> (those are extracted in the single group analysis).
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 	mkdir -p $(1)/nifti ;\
 	bin/extract-all-bricks.sh \
@@ -163,7 +177,8 @@ $(1)/headbrik/$(2)+????.BRIK:
 		$(Analysis) \
 		$(pairflag)
 
-$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
+$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
+$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz \
 		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
@@ -173,10 +188,15 @@ $(1)/clustcorr/$(2)_$(1)_clusters.nii.gz: \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr
 
-$(1)/clustcorr/$(2)_$(1)_clusters.gif: \
-		$(1)/clustcorr/$(2)_$(1)_clusters.nii.gz
+$(1)/clustcorr/$(2)_$(1)_posclusters.gif: \
+		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz
+
+$(1)/clustcorr/$(2)_$(1)_negclusters.gif: \
+		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
+	bin/slice-all-that-match.sh \
+		$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz
 
 
 endef
