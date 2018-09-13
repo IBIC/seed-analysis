@@ -40,11 +40,15 @@ while getopts ":12a:Dd:hi:kn:o:" opt ; do
         D)
             DIFFMODE="yes" ;;
         d)
-            if [[ ${OPTARG} =~ [0-9]+ ]] ; then
+            if [[ ${OPTARG} =~ ^[0-9]+ ]] ; then
                 echo "Override DoF: ${OPTARG}"
                 DEGREESOFFREEDOM=${OPTARG}
+            elif [[ ${OPTARG} = "-1" ]] ; then
+                echo "** cluster-correct.sh is estimating degrees of freedom."
+                DEGREESOFFREEDOM=""
             else
-                echo "Illegal degrees of freedom: Must be positive integer"
+                echo -n "Illegal degrees of freedom: Must be positive integer"
+                echo    " or pass -1 to calculate."
                 usage
                 exit 1
             fi ;;
@@ -134,8 +138,11 @@ if [[ ${DEGREESOFFREEDOM} == "" ]]  ; then
         group=$(echo ${labels[0]} | sed 's/_mean//')
         dof=$(( $(wc -l < group-${group}.txt) - 1 ))
     fi
+
+    echo "** DoF calculated as: ${dof}"
 else
     dof=${DEGREESOFFREEDOM}
+    echo "** Using DoF: ${dof}"
 fi
 
 # Loop over every other brik, Zscr bricks are all the odd briks
@@ -159,7 +166,6 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
         # If we didn't echo ": skipping", add a newline for pretty output
         echo
     fi
-    echo "DoF: ${dof}"
 
     # Convert from DoF to a Z score using a p-val of <.05 using a 1-sided
     # t-test

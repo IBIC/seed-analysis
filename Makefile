@@ -103,13 +103,14 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 	mkdir -p $(1)/clustcorr ;\
 	bin/cluster-correct.sh \
 		-i $(1)/headbrik/$(2) \
-		-o $(1)/clustcorr
+		-o $(1)/clustcorr \
+		-d ${DOF_D}
 
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_$*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)_$$*clusters.nii.gz
 
 endef
 
@@ -184,15 +185,17 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
-	bin/cluster-correct.sh -D \
+	bin/cluster-correct.sh \
+		-D \
 		-i $(1)/headbrik/$(2) \
-		-o $(1)/clustcorr
+		-o $(1)/clustcorr \
+		-d ${DOF_S}
 
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_$*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)_$$*clusters.nii.gz
 
 endef
 

@@ -1,6 +1,7 @@
 # seed-analysis
 
-Abstracted system for doing seed-based correlation analysis with any given set of groups and covariates. Uses AFNI `3dttest++`.
+Abstracted system for doing seed-based correlation analysis with any given set
+of groups and covariates. Uses AFNI `3dttest++`.
 
 ## How to setup this pipeline for any project.
 
@@ -107,6 +108,12 @@ options are `-ETAC` or `-Clustsim`. Note that the number of cores can be
 specified as an argument to these flags, or left off to use all available cores.
 See section 7 for a discussion of cluster correction.
 **Important:** The leading dash must be included.
+6. `DOF_S/D`: The cluster correction script, `bin/cluster-correct.sh` will
+estimate degrees of freedom for both single-group and group difference analyses.
+However, it's not that smart, so if you need to override it, set either of these
+variables to the correct DoF. `DOF_S` for single-group and `DOF_D` for group
+differences. The DoF calculation is under review and hopefully will be more
+accurate soon (9/13/18).
 
 Makefile
 ---
