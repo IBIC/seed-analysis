@@ -25,16 +25,16 @@ ALPHA=.05
 NMODE=3
 
 # Default t-test sidedness; 1 is more conservative than 2
-SIDED=1
+SIDED=2
 
 while getopts ":12a:Dd:hi:kn:o:" opt ; do
     case ${opt} in
         1)
             SIDED=1
-            echo "Using 1-sided t-test (default)" ;;
+            echo "Using 1-sided t-test" ;;
         2)
             SIDED=2
-            echo "Using 2-sided t-test" ;;
+            echo "Using 2-sided t-test (default)" ;;
         a)
             ALPHA=${OPTARG} ;;
         D)
