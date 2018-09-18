@@ -269,6 +269,8 @@ endef
 # There are two calculations to perform, one if paired, and one if unpaired.
 ifeq ($(Paired),)
 
+## UNPAIRED
+
 #@ If the calculation is UNPAIRED, then the DoF is the total number of subjects
 #@ minus 2 (two groups) and then minus the number of covariates. IMPORTANT: The
 #@ makefile does not check that the two groups are actually unpaired.
@@ -280,13 +282,15 @@ GROUPDIFF_$(1)_DoF:
 	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
 	n_subjects1=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
 	n_subjects2=$$$$(grep -c "[^\s]" group-$$$${group2}.txt) ;\
-	dof=$$$$(echo $$$${n_subjects1} + $$$${n_subjects2} - $(n_covariates) - 2 |\
-				bc) ;\
-	echo "$(1) (unpaired) DoF: $$$${dof}"
+	n_subjects=$$$$(echo $$$${n_subjects1} + $$$${n_subjects2} | bc) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 2 | bc) ;\
+	echo "Unpaired DoF: $$$${dof}" ;\
 
 endef
 
 else
+
+## PAIRED
 
 #@ If the calculation is PAIRED, then the DoF is the number of pairs minus 1,
 #@ then minus the number of covariates. Just use the number of subjects in
@@ -294,12 +298,12 @@ else
 #@ the groups are actually paired.
 define twogroup_dof =
 
-#? Calculate the DoF for a paired gorup difference
+#? Calculate the DoF for a paired group difference
 GROUPDIFF_$(1)_DoF:
 	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
-	n_subjects=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
-	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 1 | bc) ;\
-	echo "$(1) (paired) DoF: $$$${dof}"
+	n_pairs=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
+	dof=$$$$(echo $$$${n_pairs} - $(n_covariates) - 1 | bc) ;\
+	echo "Paired DoF: $$$${dof}" ;\
 
 endef
 
