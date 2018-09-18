@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Define the help function for easy calling later
 function usage {
     echo "./${0} [-a A] [-Dh] [-n N] [-1/2] -i <prefix> -d n -o <dir>"
     echo
@@ -15,16 +16,11 @@ function usage {
     echo -e "\t-h\tDisplay this help menu"
     echo -e "\t-k\tKeep intermediate files"
     echo -e "\t-n\tWhich neighbor method (1-3, default 3)"
+
+    exit ${1}
 }
 
-function message {
-    echo -e "%\t" ${@}
-}
-
-function warning {
-    echo -e "%!\t"
-}
-
+# Define a function ro report values as we loop over
 function report_value {
     echo -e "%--- ${1}: ${2}"
 }
@@ -41,11 +37,9 @@ SIDED=2
 while getopts ":12a:Dd:hi:kn:o:" opt ; do
     case ${opt} in
         1)
-            SIDED=1
-            echo "Using 1-sided t-test" ;;
+            SIDED=1 ;;
         2)
-            SIDED=2
-            echo "Using 2-sided t-test (default)" ;;
+            SIDED=2 ;;
         a)
             ALPHA=${OPTARG} ;;
         D)
@@ -57,12 +51,11 @@ while getopts ":12a:Dd:hi:kn:o:" opt ; do
             else
                 echo "Illegal degrees of freedom: Must be positive integer."
                 echo
-                usage
-                exit 1
+                usage 1
             fi ;;
         h)
-            usage
-            exit 1 ;;
+            # Print usage, quit cleanly (help is expected behavior)
+            usage 0 ;;
         i)
             # Check that input file exists
             if find . -wholename "${INPUT}+????.BRIK" ; then
@@ -83,8 +76,7 @@ while getopts ":12a:Dd:hi:kn:o:" opt ; do
                 NMODE=${OPTARG}
             else
                 echo "Illegal N mode: 1-3 only"
-                usage
-                exit 1
+                usage 1
             fi ;;
     esac
 done
@@ -97,16 +89,14 @@ report_value "t-test"   ${SIDED}"-sided"
 if [[ ${INPUT} == "" ]] || [[ ${OUTPUTDIR} == "" ]] ; then
     echo "Both input and output dir must be minimally supplied."
     echo
-    usage
-    exit 1
+    usage 1
 fi
 
 # Check that degrees of freedom was given
 if [[ ${DOF} == "" ]] ; then
     echo "Degrees of freedom must be supplied."
     echo
-    usage
-    exit 1
+    usage 1
 fi
 
 # Clear +tlrc/orig from input, just as a helper function, in case they forget
@@ -161,7 +151,6 @@ EOF
 fi
 
 report_value "Z" ${Z}
-exit
 
 # Loop over every other brik, Zscr bricks are all the odd briks
 # Clear the files that keep track of which clusters are good/nonexistent
@@ -220,9 +209,6 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
         --osize=${outputprefix}_negosize \
     > ${outputprefix}_negclusters.txt
 
-    # Remove it here before we forget
-    rm ${outputprefix}_Z-inv.nii.gz
-
     # The following steps are the same for both negative and positive, so wrap
     # in a for loop for conciseness
     for sign in neg pos ; do
@@ -241,25 +227,22 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
             -mas ${outputprefix}_${sign}keepmap \
             ${outputprefix}_${sign}clusters.nii.gz
 
+        # Is the mean of the cluster image 0? If so, save it to no text file,
+        # else, save it to the yes file
+        mean=$(fslstats ${outputprefix}_${sign}clusters.nii.gz -M)
+        if [[ ${mean} == "0.000000 " ]]
+        then
+            echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/${sign}-clusters-no.txt
+        else
+            echo -e "${prefix}_${label}" >> \
+                ${OUTPUTDIR}/${sign}-clusters-yes.txt
+        fi
+
     done
-
-    if [[ $(fslstats ${outputprefix}_posclusters.nii.gz -M) == "0.000000 " ]]
-    then
-        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/pos-clusters-no.txt
-    else
-        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/pos-clusters-yes.txt
-    fi
-
-    if [[ $(fslstats ${outputprefix}_negclusters.nii.gz -M) == "0.000000 " ]]
-    then
-        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/neg-clusters-no.txt
-    else
-        echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/neg-clusters-yes.txt
-    fi
 
     # Clean up
     if [[ ${KEEP} != "yes" ]] ; then
-        rm -f ${outputprefix}_*{keepmap,Z,osize}.nii.gz
+        rm -f ${outputprefix}_*{keepmap,Z,osize,Z-inv}.nii.gz
     fi
 
 done

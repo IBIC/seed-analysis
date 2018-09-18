@@ -38,6 +38,7 @@ contrasts=$(foreach g1,$(groups), \
 # store the number of covariates for later.
 ifeq ($(COVFILE),)
 covariate=
+n_covariates=0
 else
 covariate=-covariates $(COVFILE)
 covariatenames=$(filter-out idnum,$(shell head -n1 $(COVFILE)))
@@ -119,11 +120,27 @@ $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
 
 endef
 
+#@ Create a separate recipe for calculating the degrees of freedom for each
+#@ group because if we put it in the other recipe, it will be overridden because
+#@ it also loops over seeds
+define singlegroup_dof =
+
+SINGLEGROUP_$(1)_DoF:
+	n_subjects=$$$$(grep -c "[^\s]" group-$(1).txt) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 1 | bc -l) ;\
+	echo "$(1) DoF: $$$${dof}"
+
+endef
+
 # Loop over groups and seeds to create targets/recipes for the single-group
 # analysis.
 $(foreach group,$(groups), \
 	$(foreach seed,$(allseeds), \
 		$(eval $(call singlegroup,$(group),$(seed)))))
+
+# Calculate DoF for each group, but only once!
+$(foreach group,$(groups), \
+	$(eval $(call singlegroup_dof,$(group))))
 
 ################################################################################
 
