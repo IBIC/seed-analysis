@@ -104,7 +104,7 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 	bin/cluster-correct.sh \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr \
-		-d ${DOF_D}
+		-d $(DOF_S)
 
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
@@ -189,7 +189,7 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		-D \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr \
-		-d ${DOF_S}
+		-d $(DOF_D)
 
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
