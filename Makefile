@@ -34,12 +34,14 @@ contrasts=$(foreach g1,$(groups), \
 			$(foreach g2,$(groups), \
 				$(filter-out $(g1)-$(g1),$(g1)-$(g2)) ))
 
-# If a covariate file is given, add the flag to the covariate variable
+# If a covariate file is given, add the flag to the covariate variable and
+# store the number of covariates for later.
 ifeq ($(COVFILE),)
 covariate=
 else
 covariate=-covariates $(COVFILE)
-covariatenames=$(shell head -n1 $(COVFILE))
+covariatenames=$(filter-out idnum,$(shell head -n1 $(COVFILE)))
+n_covariates=$(words $(covariatenames))
 ifneq ($(findstring -,$(covariatenames)),)
 $(error Hyphen in one or more covariate name(s))
 endif
@@ -75,23 +77,23 @@ SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 	mkdir -p $(1)/nifti ;\
-	bin/extract-all-bricks.sh \
-		$$(dir $$@) \
+	bin/extract-all-bricks.sh 			\
+		$$(dir $$@) 					\
 		$(1)/headbrik/$(2)+????.BRIK
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+????.BRIK: group-$(1).txt
-	mkdir -p $(1)/headbrik ;\
-	export OMP_NUM_THREADS=1 ;\
+	mkdir -p $(1)/headbrik 				;\
+	export OMP_NUM_THREADS=1 ;			 \
 	3dttest++ \
-		-prefix $(1)/headbrik/$(2) \
+		-prefix $(1)/headbrik/$(2) 		 \
 		-setA $(1) $$(shell sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
-						group-$(1).txt) \
-		-overwrite \
-		-mask $(STANDARD_MASK) \
-		$(covariate) \
-		$(Analysis) \
+						group-$(1).txt)  \
+		-overwrite 						 \
+		-mask $(STANDARD_MASK)			 \
+		$(covariate)					 \
+		$(Analysis) 					 \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 #> Create the NIFTI files with the clusters that survive correction
@@ -100,11 +102,14 @@ $(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
 $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
-	mkdir -p $(1)/clustcorr ;\
-	bin/cluster-correct.sh \
-		-i $(1)/headbrik/$(2) \
-		-o $(1)/clustcorr \
-		-d ${DOF_D}
+	mkdir -p $(1)/clustcorr   ;\
+	n_subjects=$$$$(grep -c "[^\s]" group-$(1).txt) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 1 | bc -l) ;\
+	echo "$$$${dof}" ;\
+	bin/cluster-correct.sh     \
+		-i $(1)/headbrik/$(2)  \
+		-o $(1)/clustcorr      \
+		-d $$$${dof}
 
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
@@ -189,7 +194,7 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		-D \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr \
-		-d ${DOF_S}
+		-d $(DOF_D)
 
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
@@ -206,10 +211,8 @@ $(foreach contrast,$(contrasts), \
 		$(eval $(call twogroup,$(contrast),$(seed)))))
 
 .PHONY: EVERYTHING \
-		$(foreach contrast,$(contrasts), \
-				GROUPDIFF_${contrast})) \
-		$(foreach group,$(groups), \
-			SINGLEGROUP_${group})
+		$(foreach contrast,$(contrasts), GROUPDIFF_${contrast})) \
+		$(foreach group,$(groups), SINGLEGROUP_${group})
 
 .SECONDARY:
 
