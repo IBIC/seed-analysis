@@ -121,7 +121,7 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_$$*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)*_$$*clusters.nii.gz
 
 endef
 
@@ -262,7 +262,7 @@ endif
 $(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_$$*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)*_$$*clusters.nii.gz
 
 endef
 
