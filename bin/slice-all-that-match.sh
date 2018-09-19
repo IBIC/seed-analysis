@@ -28,11 +28,13 @@ for i in ${input} ; do
 		# slices \
 		# 	${output}-overlay.nii.gz \
 		# 	-o ${output}.gif
+
+		# Slicer outputs png, not gif
 		slicer \
 			${output}-overlay.nii.gz \
 			-a ${output}.png
 	fi
 
-	# rm -f $(dirname ${i})/${bn}-overlay.nii.gz
+	rm -f $(dirname ${i})/${bn}-overlay.nii.gz
 
 done
