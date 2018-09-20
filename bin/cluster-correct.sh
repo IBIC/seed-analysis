@@ -145,7 +145,7 @@ EOF
 )
 elif [ ${SIDED} -eq 1 ] ; then
 Z=$(R --no-save --slave <<-EOF
-    cat(qt(.05, ${DOF}, lower.tail = FA:SE))
+    cat(qt(.05, ${DOF}, lower.tail = FALSE))
 EOF
 )
 fi
