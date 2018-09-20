@@ -140,12 +140,12 @@ labels=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
 # Unfortunately, EOF) has to be indented awkwardly like this.
 if [ ${SIDED} -eq 2 ] ; then
 Z=$(R --no-save --slave <<-EOF
-    cat(qt(.05, ${DOF}, lower.tail = TRUE))
+    cat(abs(qt(.05, ${DOF}, lower.tail = TRUE)))
 EOF
 )
 elif [ ${SIDED} -eq 1 ] ; then
 Z=$(R --no-save --slave <<-EOF
-    cat(qt(.05, ${DOF}, lower.tail = FA:SE))
+    cat(abs(qt(.05, ${DOF}, lower.tail = FALSE)))
 EOF
 )
 fi
@@ -153,11 +153,6 @@ fi
 report_value "Z" ${Z}
 
 # Loop over every other brik, Zscr bricks are all the odd briks
-# Clear the files that keep track of which clusters are good/nonexistent
-> ${OUTPUTDIR}/pos-clusters-no.txt
-> ${OUTPUTDIR}/pos-clusters-yes.txt
-> ${OUTPUTDIR}/neg-clusters-no.txt
-> ${OUTPUTDIR}/neg-clusters-yes.txt
 for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     # Which label are we working on?
@@ -228,14 +223,22 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
             ${outputprefix}_${sign}clusters.nii.gz
 
         # Is the mean of the cluster image 0? If so, save it to no text file,
-        # else, save it to the yes file
+        # else, save it to the yes file.
+        # Every time we write to the clusters file, sort and remove duplicate
+        # entries. At least if we do it here, then each file is only sorted
+        # when something is written to it.
         mean=$(fslstats ${outputprefix}_${sign}clusters.nii.gz -M)
         if [[ ${mean} == "0.000000 " ]]
         then
-            echo -e "${prefix}_${label}" >> ${OUTPUTDIR}/${sign}-clusters-no.txt
+            echo -e "${prefix}_${label}" >> \
+                ${OUTPUTDIR}/${sign}-clusters-no.txt
+            echo "Sorting ${sign} no file"
+            sort -u -o ${OUTPUTDIR}/${sign}-clusters-no.txt{,}
         else
             echo -e "${prefix}_${label}" >> \
                 ${OUTPUTDIR}/${sign}-clusters-yes.txt
+            echo "Sorting ${sign} yes file"
+            sort -u -o ${OUTPUTDIR}/${sign}-clusters-yes.txt{,}
         fi
 
     done

@@ -17,7 +17,7 @@ for i in ${input} ; do
 	overlay \
 		0 1 \
 		${FSLDIR}/data/standard/MNI152_T1_2mm_brain.nii.gz -a \
-		${i} 0.000001 ${max} \
+		${i} 0.0001 ${max} \
 		${output}-overlay.nii.gz
 
 	# If the overlay image fails for whatever reason, give a nice error.
