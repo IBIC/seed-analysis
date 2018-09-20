@@ -230,11 +230,7 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		-D \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr \
-		-d $$$${dof} ;\
-	sort -u -o pos-clusters-yes.txt{,} ;\
-	sort -u -o pos-clusters-no.txt{,} ;\
-	sort -u -o neg-clusters-yes.txt{,} ;\
-	sort -u -o neg-clusters-no.txt{,}
+		-d $$$${dof}
 
 else
 
@@ -257,12 +253,7 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		-D \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr \
-		-d $$$${dof} ;\
-	sort -u -o pos-clusters-yes.txt{,} ;\
-	sort -u -o pos-clusters-no.txt{,} ;\
-	sort -u -o neg-clusters-yes.txt{,} ;\
-	sort -u -o neg-clusters-no.txt{,}
-
+		-d $$$${dof}
 
 endif
 
