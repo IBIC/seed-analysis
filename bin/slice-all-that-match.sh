@@ -12,27 +12,35 @@ for i in ${input} ; do
 	bn=$(basename ${i} .nii.gz)
 	output=$(dirname ${i})/${bn}
 
-	max=$(fslstats ${i} -R | sed 's/^[0-9.-]* //')
+	max=$(fslstats ${i} -r | sed -e 's/^[0-9.-]* //' -e 's/\s//')
 
-	overlay \
-		0 1 \
-		${FSLDIR}/data/standard/MNI152_T1_2mm_brain.nii.gz -a \
-		${i} 0.0001 ${max} \
-		${output}-overlay.nii.gz
+	# If the image isn't all 0s
+	if [[ ${max} != "0.000000" ]] ; then
 
-	# If the overlay image fails for whatever reason, give a nice error.
-	if ! [[ -e ${output}-overlay.nii.gz ]] ; then
-		echo "${bn}: Overlay image not created, input must be empty"
-		exit
+		overlay \
+			0 1 \
+			${FSLDIR}/data/standard/MNI152_T1_2mm_brain.nii.gz -a \
+			${i} 0.1 ${max} \
+			${output}-overlay.nii.gz
+
+		# If the overlay image fails for whatever reason, give a nice error.
+		if ! [[ -e ${output}-overlay.nii.gz ]] ; then
+			echo "${bn}: Overlay image not created"
+			exit 1
+		else
+			# Slicer outputs png, not gif
+			slicer \
+				${output}-overlay.nii.gz \
+				-a ${output}.png
+		fi
+
 	else
-		# slices \
-		# 	${output}-overlay.nii.gz \
-		# 	-o ${output}.gif
-
-		# Slicer outputs png, not gif
+		# If it is all 0s, take pictures of the template for illustrative
+		# reasons
 		slicer \
-			${output}-overlay.nii.gz \
+			${FSLDIR}/data/standard/MNI152_T1_2mm_brain.nii.gz  \
 			-a ${output}.png
+
 	fi
 
 	rm -f $(dirname ${i})/${bn}-overlay.nii.gz
