@@ -34,15 +34,22 @@ contrasts=$(foreach g1,$(groups), \
 			$(foreach g2,$(groups), \
 				$(filter-out $(g1)-$(g1),$(g1)-$(g2)) ))
 
-# If a covariate file is given, add the flag to the covariate variable
+# If a covariate file is given, add the flag to the covariate variable and
+# store the number of covariates for later. Otherwise, store the number of
+# covariates as 0.
 ifeq ($(COVFILE),)
 covariate=
+n_covariates=0
 else
 covariate=-covariates $(COVFILE)
-covariatenames=$(shell head -n1 $(COVFILE))
+covariatenames=$(filter-out idnum,$(shell head -n1 $(COVFILE)))
+n_covariates=$(words $(covariatenames))
+endif
+
+# Check to make sure there's no hyphens in covariate names, they'll muck things
+# up
 ifneq ($(findstring -,$(covariatenames)),)
 $(error Hyphen in one or more covariate name(s))
-endif
 endif
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
@@ -62,36 +69,37 @@ define singlegroup =
 SINGLEGROUP_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
-SINGLEGROUP_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_posclusters.nii.gz) \
-							$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_negclusters.nii.gz) \
-							$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_posclusters.gif) \
-							$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_negclusters.gif)
+SINGLEGROUP_$(1)_clustcorr: \
+						$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_posclusters.nii.gz) \
+						$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_negclusters.nii.gz) \
+						$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_posclusters.png) \
+						$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_negclusters.png)
 
 #> Convert the mean images from the first subbrick (#0)
 #> If covariates or Zscr are misisng, delete _mean to regenerate all.
 $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 	mkdir -p $(1)/nifti ;\
-	bin/extract-all-bricks.sh \
-		$$(dir $$@) \
+	bin/extract-all-bricks.sh 			\
+		$$(dir $$@) 					\
 		$(1)/headbrik/$(2)+????.BRIK
 
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+????.BRIK: group-$(1).txt
-	mkdir -p $(1)/headbrik ;\
-	export OMP_NUM_THREADS=1 ;\
+	mkdir -p $(1)/headbrik 				;\
+	export OMP_NUM_THREADS=1 ;			 \
 	3dttest++ \
-		-prefix $(1)/headbrik/$(2) \
+		-prefix $(1)/headbrik/$(2) 		 \
 		-setA $(1) $$(shell sed 's|$$$$|/$(2)$(SVCSUFFIX).nii.gz|' \
-						group-$(1).txt) \
-		-overwrite \
-		-mask $(STANDARD_MASK) \
-		$(covariate) \
-		$(Analysis) \
+						group-$(1).txt)  \
+		-overwrite 						 \
+		-mask $(STANDARD_MASK)			 \
+		$(covariate)					 \
+		$(Analysis) 					 \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 #> Create the NIFTI files with the clusters that survive correction
@@ -100,17 +108,32 @@ $(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
 $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/$(2)+????.BRIK \
 		$(1)/nifti/$(2)_$(1)_mean.nii.gz
-	mkdir -p $(1)/clustcorr ;\
-	bin/cluster-correct.sh \
-		-i $(1)/headbrik/$(2) \
-		-o $(1)/clustcorr \
-		-d $(DOF_S)
+	mkdir -p $(1)/clustcorr   ;\
+	n_subjects=$$$$(grep -c "[^\s]" group-$(1).txt) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 1 | bc -l) ;\
+	echo "$$$${dof}" ;\
+	bin/cluster-correct.sh     \
+		-i $(1)/headbrik/$(2)  \
+		-o $(1)/clustcorr      \
+		-d $$$${dof}
 
 #> Make a slice of the clusters images - pattern matching works here
-$(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
+$(1)/clustcorr/$(2)_$(1)_%clusters.png: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_$$*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)*_$$*clusters.nii.gz
+
+endef
+
+#@ Create a separate recipe for calculating the DoF for each group because if
+#@ we put it in the other recipe, it will be overridden because it also loops
+#@ over seeds
+define singlegroup_dof =
+
+SINGLEGROUP_$(1)_DoF:
+	n_subjects=$$$$(grep -c "[^\s]" group-$(1).txt) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 1 | bc) ;\
+	echo "$(1) DoF: $$$${dof}"
 
 endef
 
@@ -119,6 +142,10 @@ endef
 $(foreach group,$(groups), \
 	$(foreach seed,$(allseeds), \
 		$(eval $(call singlegroup,$(group),$(seed)))))
+
+# Calculate DoF for each group, but only once!
+$(foreach group,$(groups), \
+	$(eval $(call singlegroup_dof,$(group))))
 
 ################################################################################
 
@@ -132,14 +159,15 @@ define twogroup =
 GROUPDIFF_$(1): $(foreach seed,$(allseeds),\
 						$(1)/nifti/$(seed)_$(1)_mean.nii.gz)
 
-GROUPDIFF_$(1)_clustcorr: $(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_posclusters.nii.gz) \
-						$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_negclusters.nii.gz) \
-						$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_posclusters.gif) \
-						$(foreach seed,$(allseeds), \
-								$(1)/clustcorr/$(seed)_$(1)_negclusters.gif)
+GROUPDIFF_$(1)_clustcorr: \
+					$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_posclusters.nii.gz) \
+					$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_negclusters.nii.gz) \
+					$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_posclusters.png) \
+					$(foreach seed,$(allseeds), \
+							$(1)/clustcorr/$(seed)_$(1)_negclusters.png)
 
 #> Extract all the sub-bricks (automatically does all mean/Tstat for all
 #> covariates and the basic state). Removes all of the single-group analyses
@@ -176,7 +204,13 @@ $(1)/headbrik/$(2)+????.BRIK:
 		$(Analysis) \
 		$(pairflag)
 
-#> Create the NIFTI files with the clusters that survive correction
+# Generate different rules depending on whether the analysis was done on paired
+# or unpaired groups
+ifeq ($(Paired),)
+
+## UNPAIRED
+
+#> Create the NIFTI files with the clusters that survive correction: paired
 # (cluster-correct.sh creates both.)
 $(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
 $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
@@ -185,19 +219,94 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
 	mkdir -p $(1)/clustcorr ;\
 	export OMP_NUM_THREADS=1 ;\
+	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
+	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
+	n_subjects1=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
+	n_subjects2=$$$$(grep -c "[^\s]" group-$$$${group2}.txt) ;\
+	n_subjects=$$$$(echo $$$${n_subjects1} + $$$${n_subjects2} | bc) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 2 | bc) ;\
+	echo "$$$${dof}" ;\
 	bin/cluster-correct.sh \
 		-D \
 		-i $(1)/headbrik/$(2) \
 		-o $(1)/clustcorr \
-		-d $(DOF_D)
+		-d $$$${dof}
+
+else
+
+## PAIRED
+
+#> Create the NIFTI files with the clusters that survive correction: unpaired
+# (cluster-correct.sh creates both.)
+$(1)/clustcorr/$(2)_$(1)_posclusters.nii.gz \
+$(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
+		$(1)/headbrik/$(2)+????.BRIK \
+		$(1)/nifti/$(2)_$(1)_mean.nii.gz \
+		$(1)/headbrik/cc.$(2).CSimA.NN1_1sided.1D
+	mkdir -p $(1)/clustcorr ;\
+	export OMP_NUM_THREADS=1 ;\
+	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
+	n_pairs=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
+	dof=$$$$(echo $$$${n_pairs} - $(n_covariates) - 1 | bc) ;\
+	echo "$$$${dof}" ;\
+	bin/cluster-correct.sh \
+		-D \
+		-i $(1)/headbrik/$(2) \
+		-o $(1)/clustcorr \
+		-d $$$${dof}
+
+endif
 
 #> Make a slice of the clusters images - pattern matching works here
-$(1)/clustcorr/$(2)_$(1)_%clusters.gif: \
+$(1)/clustcorr/$(2)_$(1)_%clusters.png: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz
 	bin/slice-all-that-match.sh \
-		$(1)/clustcorr/$(2)_$(1)_$$*clusters.nii.gz
+		$(1)/clustcorr/$(2)_$(1)*_$$*clusters.nii.gz
 
 endef
+
+# There are two calculations to perform, one if paired, and one if unpaired.
+ifeq ($(Paired),)
+
+## UNPAIRED
+
+#@ If the calculation is UNPAIRED, then the DoF is the total number of subjects
+#@ minus 2 (two groups) and then minus the number of covariates. IMPORTANT: The
+#@ makefile does not check that the two groups are actually unpaired.
+define twogroup_dof =
+
+#? Calculate the DoF for an unpaired group difference
+GROUPDIFF_$(1)_DoF:
+	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
+	group2=$$$$(echo $(1) | sed 's/.*-//') ;\
+	n_subjects1=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
+	n_subjects2=$$$$(grep -c "[^\s]" group-$$$${group2}.txt) ;\
+	n_subjects=$$$$(echo $$$${n_subjects1} + $$$${n_subjects2} | bc) ;\
+	dof=$$$$(echo $$$${n_subjects} - $(n_covariates) - 2 | bc) ;\
+	echo "Unpaired DoF: $$$${dof}" ;\
+
+endef
+
+else
+
+## PAIRED
+
+#@ If the calculation is PAIRED, then the DoF is the number of pairs minus 1,
+#@ then minus the number of covariates. Just use the number of subjects in
+#@ group 1 as the number of pairs. IMPORTANT: The makefile does not check that
+#@ the groups are actually paired.
+define twogroup_dof =
+
+#? Calculate the DoF for a paired group difference
+GROUPDIFF_$(1)_DoF:
+	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
+	n_pairs=$$$$(grep -c "[^\s]" group-$$$${group1}.txt) ;\
+	dof=$$$$(echo $$$${n_pairs} - $(n_covariates) - 1 | bc) ;\
+	echo "Paired DoF: $$$${dof}" ;\
+
+endef
+
+endif
 
 # Expand over the group list twice to create the recipes for every combination
 # of groups.
@@ -205,11 +314,12 @@ $(foreach contrast,$(contrasts), \
 	$(foreach seed,$(allseeds), \
 		$(eval $(call twogroup,$(contrast),$(seed)))))
 
+$(foreach contrast,$(contrasts), \
+	$(eval $(call twogroup_dof,$(contrast))))
+
 .PHONY: EVERYTHING \
-		$(foreach contrast,$(contrasts), \
-				GROUPDIFF_${contrast})) \
-		$(foreach group,$(groups), \
-			SINGLEGROUP_${group})
+		$(foreach contrast,$(contrasts), GROUPDIFF_${contrast})) \
+		$(foreach group,$(groups), SINGLEGROUP_${group})
 
 .SECONDARY:
 

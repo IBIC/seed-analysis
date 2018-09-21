@@ -30,7 +30,7 @@ the seeds used in the project listed in a single column like so:
 	...
 
 The makefile reads from the directory listed in the first line and looks for
-the seeds on the `n>1` lines. These seeds can have any notes following the
+the seeds on the `n>1` lines. These files can have any notes following the
 seed name in the file name, but must have an `.nii.gz` extension.
 For example, `DANRaIPS_sphereroi.nii.gz` is acceptable, but
 `ROI_DANRaIPS.nii` wouldn't be.
@@ -79,12 +79,12 @@ The first fifty or so lines of the makefile set a number of variables for
 `make` execution. **However**, all the project-specific variables are set in the
 auxiliary file `analysis/settings.conf`.
 
-In general, the convention is ALL_CAPS variables should be modified on a project
+In general, the convention is ALL CAPS variables should be modified on a project
 basis and left alone. PascalCase variables can be given a default, but can be
 overridden on the command line (any variable can be so overridden, but these are
-likely to be.) lowercase variables should not be modified.
+likely to be.) All lowercase variables should not be modified.
 
-To override the default value of the PascalCase variables, simply set a new
+To override the default value of any variable, simply set a new
 value for them on the command line, like so:
 
     make SINGLEGROUP_PD ANALYSIS=-ETAC
@@ -108,12 +108,6 @@ options are `-ETAC` or `-Clustsim`. Note that the number of cores can be
 specified as an argument to these flags, or left off to use all available cores.
 See section 7 for a discussion of cluster correction.
 **Important:** The leading dash must be included.
-6. `DOF_S/D`: The cluster correction script, `bin/cluster-correct.sh` will
-estimate degrees of freedom for both single-group and group difference analyses.
-However, it's not that smart, so if you need to override it, set either of these
-variables to the correct DoF. `DOF_S` for single-group and `DOF_D` for group
-differences. The DoF calculation is under review and hopefully will be more
-accurate soon (9/13/18).
 
 Makefile
 ---
@@ -151,8 +145,18 @@ in your `analysis/` directory and that they are formatted correctly. It isn't
 perfect, so do not count a successful result here as proof positive your project
 is ready to go.
 
-### 5. Set up covariates
+Additionally, check the number of degrees of freedom for your analysis:
 
+    make SINGLEGROUP_<group>_DoF
+
+    make GROUPDIFF_<contrast>_DoF
+
+Note though, that due to the constraints of Make, the calculation has to be
+written out twice. So it is possible that there is a discrepancy between the
+test calculation and the value actually passed to `cluster-correct.sh`. Please
+let me know if you discover any such issues.
+
+### 5. Set up covariates
 
 A covariate file takes the following format, including up to 32
 whitespace-separated columns (including the subject identifier column).
@@ -191,7 +195,8 @@ There are two primary ways of running this makefile: single-group and
 between-group analyses.
 
  + Run `SINGLEGROUP_<g>`, where `g` is one of the groups set in step 2 to run
- for a single group. Note that this requires a minimum of 14 subjects.
+ for a single group. Note that this requires a minimum of 14 subjects (an AFNI
+ `3dttest++` requirement).
 
 For example, you could type:
 
@@ -223,8 +228,8 @@ While the math behind the methodologies is beyond the scope of this README, the
 basic effect is to remove noise.
 
 *Important:* It is possible to have no voxels survive cluster correction. In
-this case, the cluster corrected maps will be empty, this isn't a symptom of
-program failure.
+this case, the cluster corrected maps will be empty, this isn't necessarily a
+symptom of program failure.
 
 Cluster correction is a separate step because it takes a while, even when
 parallelized (see section 8), and this setup allows you to examine intermediate
@@ -273,9 +278,9 @@ This is at the core of Eklund's 2016 [1] critique of fMRI false-positive rates.
 Equitable Tresholding and Clustering (ETAC) is a response to the abovementioned
 concerns about false-positive rates. Its `3dttest++` option is `-ETAC`.
 
-See Cox et al.'s  response [2] for details about how ETAC works, but at its
+See Cox et al.'s response [2] for details about how ETAC works, but at its
 core, it uses different cluster thresholds for different regions of the brain
-based what we know about how large functional clusters are in  one area of the
+based what we know about how large functional clusters are in one area of the
 brain compared to another.
 
 ### 8. Notes on parallelizing
