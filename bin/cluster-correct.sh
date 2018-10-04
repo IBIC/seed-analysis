@@ -137,7 +137,7 @@ fi
 # Get the minimum cluster size
 # The t-test info is in this 1D file
 # ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_${SIDED}sided.1D
-p_row=$(grep "^ 0.050000" ${ttest})
+p_row=$(grep "^ ${ppadded}" ${ttest})
 
 # Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
 column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
@@ -160,12 +160,12 @@ labels=($(3dinfo -label ${INPUT} | sed 's/|/ /g'))
 # Unfortunately, EOF) has to be indented awkwardly like this.
 if [ ${SIDED} -eq 2 ] ; then
 Z=$(R --no-save --slave <<-EOF
-    cat(abs(qt(.05, ${DOF}, lower.tail = TRUE)))
+    cat(abs(qt(${PVALUE}, ${DOF}, lower.tail = TRUE)))
 EOF
 )
 elif [ ${SIDED} -eq 1 ] ; then
 Z=$(R --no-save --slave <<-EOF
-    cat(abs(qt(.05, ${DOF}, lower.tail = FALSE)))
+    cat(abs(qt(${PVALUE}, ${DOF}, lower.tail = FALSE)))
 EOF
 )
 fi
