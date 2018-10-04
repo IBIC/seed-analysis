@@ -16,6 +16,7 @@ function usage {
     echo -e "\t-h\tDisplay this help menu"
     echo -e "\t-k\tKeep intermediate files"
     echo -e "\t-n\tWhich neighbor method (1-3, default 3)"
+    echo -e "\t-p\tSet a custom p threshold (0.0-1.0, default 0.05)"
 
     exit ${1}
 }
@@ -34,7 +35,9 @@ NMODE=3
 # Default t-test sidedness; 1 is more conservative than 2
 SIDED=2
 
-while getopts ":12a:Dd:hi:kn:o:" opt ; do
+PVALUE=0.05
+
+while getopts ":12a:Dd:hi:kn:o:p:" opt ; do
     case ${opt} in
         1)
             SIDED=1 ;;
@@ -78,6 +81,8 @@ while getopts ":12a:Dd:hi:kn:o:" opt ; do
                 echo "Illegal N mode: 1-3 only"
                 usage 1
             fi ;;
+        p)
+            PVALUE=${OPTARG} ;;
     esac
 done
 
@@ -112,18 +117,33 @@ inputfile=$(find $(dirname ${INPUT}) -name "${prefix}+????.BRIK")
 maxbrikindex=$(3dinfo -nvi ${inputfile})
 report_value "Max brik index" ${maxbrikindex}
 
+# Check the p-value
+if printf "%0.6f" ${PVALUE} ; then
+    ppadded=$(printf "%0.6f" ${PVALUE})
+else
+    echo -e "\nUnable to parse supplied p threshold ${PVALUE}. Exiting."
+    exit 1
+fi
+# Add line before report because "if" echos result
+echo ; report_value "p thresh" ${ppadded}
+
+ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_${SIDED}sided.1D
+
+if ! grep ${ppadded} ${ttest} ; then
+    echo "p threshold of ${ppadded} not supplied in 1D file. Unable to proceed."
+    exit 1
+fi
+
 # Get the minimum cluster size
 # The t-test info is in this 1D file
-ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_${SIDED}sided.1D
-p05=$(grep "^ 0.050000" ${ttest})
-
-# echo ${ttest} ; exit
+# ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_${SIDED}sided.1D
+p_row=$(grep "^ 0.050000" ${ttest})
 
 # Convert from alpha value to column (columns go NA, 0.1 ... 0.01)
 column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
 
 # Get the ROI size in voxels
-ROIsize_voxel=$(echo ${p05} | awk "{print \$${column}}")
+ROIsize_voxel=$(echo ${p_row} | awk "{print \$${column}}")
 report_value "ROI size (vx)" ${ROIsize_voxel}
 
 # The second brik is always the one that we want - for a single group, it's the
