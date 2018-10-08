@@ -59,7 +59,6 @@ for i in ${input} ; do
 			rm ${temp}
 
 		fi
-
 	fi
 
 	# Clean up

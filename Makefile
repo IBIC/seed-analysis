@@ -257,7 +257,6 @@ $(1)/clustcorr/$(2)_$(1)_negclusters.nii.gz: \
 
 endif
 
-
 #> Make a slice of the clusters images - pattern matching works here
 $(1)/clustcorr/$(2)_$(1)_%clusters.png: \
 		$(1)/clustcorr/$(2)_$(1)_%clusters.nii.gz

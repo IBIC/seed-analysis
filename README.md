@@ -243,6 +243,12 @@ To run cluster correction, call either single or difference cluster correction:
 
 Either of these will use the cluster correction method identified in Section 3.
 
+Note that if run asynchronously, the QA image creation program might try to take
+pictures of temporary files that are deleted as the makefile progresses. You
+might see such "unable to read file" message. These are harmless; only the
+appropriate files are created, but you can avoid this messages by running
+sequentially (e.g. `make SINGLEGROUP_patient_clustcorr -k`.)
+
 #### 7.1 Cluster correction results
 
 This will create a new directory at the same level as `nifti` and `headbrik`:
