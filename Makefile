@@ -53,8 +53,7 @@ $(error Hyphen in one or more covariate name(s))
 endif
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
-Paired=
-ifeq ($(Paired),)
+ifeq ($(PAIRED),"no")
 pairflag=
 else
 pairflag=-paired
@@ -99,7 +98,7 @@ $(1)/headbrik/$(2)+????.BRIK: group-$(1).txt
 		-overwrite 						 \
 		-mask $(STANDARD_MASK)			 \
 		$(covariate)					 \
-		$(Analysis) 					 \
+		$(ANALYSIS) 					 \
 		-prefix_clustsim $(1)/headbrik/cc.$(2)
 
 #> Create the NIFTI files with the clusters that survive correction
@@ -201,12 +200,12 @@ $(1)/headbrik/$(2)+????.BRIK:
 		-overwrite \
 		-mask $(STANDARD_MASK) \
 		$(covariate) \
-		$(Analysis) \
+		$(ANALYSIS) \
 		$(pairflag)
 
 # Generate different rules depending on whether the analysis was done on paired
 # or unpaired groups
-ifeq ($(Paired),)
+ifeq ($(PAIRED),)
 
 ## UNPAIRED
 
@@ -266,7 +265,7 @@ $(1)/clustcorr/$(2)_$(1)_%clusters.png: \
 endef
 
 # There are two calculations to perform, one if paired, and one if unpaired.
-ifeq ($(Paired),)
+ifeq ($(PAIRED),)
 
 ## UNPAIRED
 
