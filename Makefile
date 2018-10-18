@@ -265,7 +265,7 @@ $(1)/clustcorr/$(2)_$(1)_%clusters.png: \
 endef
 
 # There are two calculations to perform, one if paired, and one if unpaired.
-ifeq ($(PAIRED),"no")
+ifndef PAIRED
 
 ## UNPAIRED
 
