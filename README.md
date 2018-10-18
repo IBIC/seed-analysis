@@ -108,10 +108,10 @@ options are `-ETAC` or `-Clustsim`. Note that the number of cores can be
 specified as an argument to these flags, or left off to use all available cores.
 See section 7 for a discussion of cluster correction.
 **Important:** The leading dash must be included.
-6. `PAIRED`: By default, an unpaired t-test is executed.
-To do a paired t-test, changed the value of `Paired` to anything other than
-"no" (for example, "yes"). `3dttest++` will fail if your subject lists
-aren't properly paired.
+6. `PAIRED`: By default, an unpaired t-test is executed. To do a paired t-test,
+changed the value of `Paired` to anything other than the empty string
+(for example, "yes"). `3dttest++` will fail if your subject lists aren't
+properly paired.
 
 Makefile
 ---
@@ -131,7 +131,7 @@ declaration! There should be N(N-1) total contrasts*
 a `COVFILE`. It is later read by `3dttest++`, and adds the option
 `-covariates` for the proper syntax. Don't change this logic statement.*
 7. *`pairflag`: Adds the `-paired` flag to the `GROUPDIFF` t-test if the
-`Paired` variable is set to true.*
+`PAIRED` variable is set to true.*
 
 ### 4. Test your setup
 

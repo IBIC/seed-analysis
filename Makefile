@@ -53,10 +53,10 @@ $(error Hyphen in one or more covariate name(s))
 endif
 
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
-ifeq ($(PAIRED),"no")
-pairflag=
-else
+ifdef PAIRED
 pairflag=-paired
+else
+pairflag=
 endif
 
 ################################################################################
@@ -205,7 +205,7 @@ $(1)/headbrik/$(2)+????.BRIK:
 
 # Generate different rules depending on whether the analysis was done on paired
 # or unpaired groups
-ifeq ($(PAIRED),)
+ifndef PAIRED
 
 ## UNPAIRED
 
@@ -265,7 +265,7 @@ $(1)/clustcorr/$(2)_$(1)_%clusters.png: \
 endef
 
 # There are two calculations to perform, one if paired, and one if unpaired.
-ifeq ($(PAIRED),)
+ifeq ($(PAIRED),"no")
 
 ## UNPAIRED
 
@@ -332,5 +332,5 @@ EVERYTHING: $(foreach contrast,$(contrasts), \
 
 #? Echo the value of a variable
 test-%:
-	@echo $($*) ;\
+	@echo \'$($*)\' ;\
 	 echo "Count $*: $(words $($*))"
