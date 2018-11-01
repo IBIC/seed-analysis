@@ -55,8 +55,10 @@ endif
 #! Check whether to do a paired t-test (group diff only); defaults to "no"
 ifdef PAIRED
 pairflag=-paired
+$(info Doing a paired test)
 else
 pairflag=
+$(info Doing an unpaired test)
 endif
 
 ################################################################################

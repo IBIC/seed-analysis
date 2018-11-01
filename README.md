@@ -109,7 +109,7 @@ specified as an argument to these flags, or left off to use all available cores.
 See section 7 for a discussion of cluster correction.
 **Important:** The leading dash must be included.
 6. `PAIRED`: By default, an unpaired t-test is executed. To do a paired t-test,
-changed the value of `Paired` to anything other than the empty string
+changed the value of `PAIRED` to anything other than the empty string
 (for example, "yes"). `3dttest++` will fail if your subject lists aren't
 properly paired.
 
