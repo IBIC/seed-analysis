@@ -17,13 +17,16 @@ function usage {
     echo -e "\t-k\tKeep intermediate files"
     echo -e "\t-n\tWhich neighbor method (1-3, default 3)"
     echo -e "\t-p\tSet a custom p threshold (0.0-1.0, default 0.05)"
+    echo
+    echo -e "\t-L\tIf this option is activated, create a log file for debugging"
 
     exit ${1}
 }
 
 # Define a function ro report values as we loop over
+# If a third argument is given, send output to that file
 function report_value {
-    echo -e "%--- ${1}: ${2}"
+    echo -e "%--- ${1}: ${2}" | tee -a ${3}
 }
 
 # Default alpha value
@@ -35,9 +38,10 @@ NMODE=3
 # Default t-test sidedness; 1 is more conservative than 2
 SIDED=2
 
-PVALUE=0.05
+# Default p-value is <0.05
+PVALUE=0.01
 
-while getopts ":12a:Dd:hi:kn:o:p:" opt ; do
+while getopts ":12a:Dd:hi:kLn:o:p:" opt ; do
     case ${opt} in
         1)
             SIDED=1 ;;
@@ -70,6 +74,8 @@ while getopts ":12a:Dd:hi:kn:o:p:" opt ; do
             ;;
         k)
             KEEP="yes" ;;
+        L)
+			LOGGING="yes" ;;
         o)
             OUTPUTDIR=${OPTARG}
             mkdir -p ${OUTPUTDIR}
@@ -86,9 +92,21 @@ while getopts ":12a:Dd:hi:kn:o:p:" opt ; do
     esac
 done
 
-report_value "neighbor" ${NMODE}
-report_value "alpha"    ${ALPHA}
-report_value "t-test"   ${SIDED}"-sided"
+
+# Set up logfile if -L was given
+if [[ ${LOGGING} == "yes" ]] ; then
+	stamp=$(date +'%y%m%d-%H%M')
+	LOGFILE=${OUTPUTDIR}/clustlog_${stamp}.txt
+
+	echo "Creating logfile ${LOGFILE}"
+
+	echo ${INPUT} > ${LOGFILE}
+	echo "Output: ${OUTPUTDIR}" >> ${LOGFILE}
+fi
+
+report_value "neighbor" ${NMODE}			${LOGFILE}
+report_value "alpha"    ${ALPHA}			${LOGFILE}
+report_value "t-test"   ${SIDED}"-sided"	${LOGFILE}
 
 # Check that both input and output were given
 if [[ ${INPUT} == "" ]] || [[ ${OUTPUTDIR} == "" ]] ; then
@@ -115,7 +133,7 @@ inputfile=$(find $(dirname ${INPUT}) -name "${prefix}+????.BRIK")
 
 # Get the maximum brik index (0-indexed)
 maxbrikindex=$(3dinfo -nvi ${inputfile})
-report_value "Max brik index" ${maxbrikindex}
+report_value "Max brik index" 	${maxbrikindex}	${LOGFILE}
 
 # Check the p-value
 if printf "%0.6f" ${PVALUE} ; then
@@ -124,10 +142,12 @@ else
     echo -e "\nUnable to parse supplied p threshold ${PVALUE}. Exiting."
     exit 1
 fi
+
 # Add line before report because "if" echos result
-echo ; report_value "p thresh" ${ppadded}
+echo ; report_value "p thresh"	${ppadded}	${LOGFILE}
 
 ttest=$(dirname ${INPUT})/*.${prefix}.CSimA.NN${NMODE}_${SIDED}sided.1D
+report_value "ttest file"	${ttest}	${LOGFILE}
 
 if ! grep ${ppadded} ${ttest} ; then
     echo "p threshold of ${ppadded} not supplied in 1D file. Unable to proceed."
@@ -144,7 +164,7 @@ column=$(echo "${ALPHA} * -100 + 12" | bc | sed 's/.00//')
 
 # Get the ROI size in voxels
 ROIsize_voxel=$(echo ${p_row} | awk "{print \$${column}}")
-report_value "ROI size (vx)" ${ROIsize_voxel}
+report_value "ROI size (vx)"	${ROIsize_voxel}	${LOGFILE}
 
 # The second brik is always the one that we want - for a single group, it's the
 # Z score, and for a groupdiff, it goes diff, diff z, group 1, group 1 Z ...
@@ -170,7 +190,7 @@ EOF
 )
 fi
 
-report_value "Z" ${Z}
+report_value "Z"	${Z}	${LOGFILE}
 
 # Loop over every other brik, Zscr bricks are all the odd briks
 for brik in $(seq 1 2 ${maxbrikindex}) ; do
@@ -201,7 +221,7 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
     cluster \
         --zstat=${outputprefix}_Z.nii.gz  \
         --zthresh=${Z} \
-        --othresh=${outputprefix}_posclusters \
+        --othresh=${outputprefix}_posclustersA \
         --osize=${outputprefix}_pososize \
     > ${outputprefix}_posclusters.txt
 
@@ -220,7 +240,7 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
     cluster \
         --zstat=${outputprefix}_Z-inv.nii.gz  \
         --zthresh=${Z} \
-        --othresh=${outputprefix}_negclusters \
+        --othresh=${outputprefix}_negclustersA \
         --osize=${outputprefix}_negosize \
     > ${outputprefix}_negclusters.txt
 
@@ -236,10 +256,11 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
             -bin \
             ${outputprefix}_${sign}keepmap
 
-        # Mask clusters image to only include large enough clusters and then
-        # binarize them to create a nice mask
-        fslmaths ${outputprefix}_${sign}clusters.nii.gz \
-            -mas ${outputprefix}_${sign}keepmap \
+        # Mask clusters image to only include large enough clusters
+        # fslmaths -mas treats all-0 masks as DON'T DO ANYTHING, not DON'T
+        # INCLUDE anything ... wonderful
+        fslmaths ${outputprefix}_${sign}clustersA.nii.gz \
+            -mul ${outputprefix}_${sign}keepmap \
             ${outputprefix}_${sign}clusters.nii.gz
 
         # Is the mean of the cluster image 0? If so, save it to no text file,
@@ -265,7 +286,7 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     # Clean up
     if [[ ${KEEP} != "yes" ]] ; then
-        rm -f ${outputprefix}_*{keepmap,Z,osize,Z-inv}.nii.gz
+        rm -f ${outputprefix}_*{clustersA,keepmap,osize,Z{,-inv}}.nii.gz
     fi
 
 done
