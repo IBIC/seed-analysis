@@ -7,8 +7,6 @@ errecho () { echo -e "ERROR:\t${1}" ; }
 # Check that the config directory exists.
 if ! [[ -d analysis ]] ; then
 	errecho "analysis/ dir missing, creating for you."
-	mkdir -p analysis
-	exit
 fi
 
 # If the all seeds list exists, check the format, or error if it doesn't exist

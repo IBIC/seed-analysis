@@ -3,7 +3,7 @@
 Abstracted system for doing seed-based correlation analysis with any given set
 of groups and covariates. Uses AFNI `3dttest++`.
 
-## How to setup this pipeline for any project.
+## I. How to setup this pipeline for any project.
 
 Below is a general guide to setting up this pipeline for any project.
 We assume that you will clone this repository and, in that directory,
@@ -108,15 +108,15 @@ options are `-ETAC` or `-Clustsim`. Note that the number of cores can be
 specified as an argument to these flags, or left off to use all available cores.
 See section 7 for a discussion of cluster correction.
 **Important:** The leading dash must be included.
-6. `PAIRED`: By default, an unpaired t-test is executed. To do a paired t-test,
-changed the value of `PAIRED` to anything other than the empty string
-(for example, "yes"). `3dttest++` will fail if your subject lists aren't
-properly paired.
 
 Makefile
 ---
 
-1. `seedsdir`: This variable is read in from the first lne of `allseeds.txt`
+1. `Paired`: By default, an unpaired t-test is executed.
+To do a paired t-test, changed the value of `Paired` to anything other than the
+empty string (for example, "yes").
+`3dttest++` will fail if your subject lists aren't properly paired.
+2. `seedsdir`: This variable is read in from the first lne of `allseeds.txt`
 and contains all the ROIs used in later analyses.
 3. `allseeds`: By default, all the seeds are read in from the file `allseeds`
 (see section 1). This can be overriden here if you have another method to
@@ -131,7 +131,7 @@ declaration! There should be N(N-1) total contrasts*
 a `COVFILE`. It is later read by `3dttest++`, and adds the option
 `-covariates` for the proper syntax. Don't change this logic statement.*
 7. *`pairflag`: Adds the `-paired` flag to the `GROUPDIFF` t-test if the
-`PAIRED` variable is set to true.*
+`Paired` variable is set to true.*
 
 ### 4. Test your setup
 
@@ -323,8 +323,63 @@ Or, you can submit the jobs using [`rmake`](https://github.com/IBIC/rmake):
 
     rmake -T <TARGET>
 
+## II Script documentation
 
-## Citations
+This project contains four scripts in `bin/` that you may need to run. Three of
+these scripts are automatically called by the Makefile, and `check-config.sh` is
+for your information.
+
+### 1. `check-config.sh`
+
+Run `check-config.sh` from the root directory (i.e. where the Makefile is) to
+check your configuration.
+
+### 2. `cluster-correct.sh`
+
+`cluster-correct.sh` takes the output of `3dttest++` and cluster corrects given
+certain *p* and *alpha* values. Here are the mandatory and optional arguments:
+
+Mandatory:
+
+ - `-i *` Input prefix, path to HEAD/BRIK files *without*
+        `+{orig,tlrc}.{HEAD,BRIK}` suffixes.
+ - `-d *` Set the degrees of freedom. (Previously not a mandatory option.)
+ - `-o *` Output directory.
+ - `-D`   **Group mode**. Use this when comparing two groups, not just one.
+
+Optional:
+
+ - `-1/2` Use a 1- or 2-sided t-test (default 2)
+ - `-a *` Set custom alpha value (default 0.5)
+ - `-h`   Display help menu
+ - `-k`   Keep mode, don't delete intermediate files for debugging
+ - `-L`   Creates a log file in the output directory with parameters from the
+            run.
+ - `-n [123]` Which neighbor mode to use (default 3)
+   - 1: Faces only
+   - 2: Faces and edges
+   - 3: Faces, edges, and corners
+ - `-p *` Set custom *p* threshold (default 0.05), set value between 0.0-1.0.
+            Not all *p*-values can be used, and `cluster-correct.sh` will warn
+            you if you try to use one.
+
+### 3. `extract-all-briks.sh`
+
+This script extracts all the AFNI bricks to individual NIFTI files and names
+them appropriately. It takes 2+ arguments. The first is an output directory, and
+the second and beyond are BRIK files. All bricks from all BRIK files will be
+extracted to the given directory.
+
+Each BRIK file must have a corresponding HEAD file, or else it will fail.
+
+### 4. `slice-all-that-match.sh`
+
+This script creates images using `slicer` for every **NIFTI** file you give it
+and outputs them to the same place as the input. It also annotates "EMPTY" onto
+empty files so you can be sure they are actually empty and not just missing from
+the given view.
+
+## III Citations
 
 [1] Eklund, A., Nichols, T. E., & Knutsson, H. (2016). "Cluster failure: Why
 fMRI inferences for spatial extent have inflated false-positive rates.

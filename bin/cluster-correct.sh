@@ -2,7 +2,7 @@
 
 # Define the help function for easy calling later
 function usage {
-    echo "./${0} [-a A] [-Dh] [-n N] [-1/2] -i <prefix> -d n -o <dir>"
+    echo "./${0} [-1/2] [-a A] [-DhkL] [-n N] [-p P] -i <prefix> -d <n> -o <dir>"
     echo
     echo -e "\t-i\tInput prefix. Path to HEAD/BRIK w/o +{orig,tlrc}.{HEAD,BRIK}"
     echo -e "\t-d\tSet the degrees of freedom (NOW mandatory)"
@@ -23,7 +23,7 @@ function usage {
     exit ${1}
 }
 
-# Define a function ro report values as we loop over
+# Define a function to report values as we loop over
 # If a third argument is given, send output to that file
 function report_value {
     echo -e "%--- ${1}: ${2}" | tee -a ${3}
