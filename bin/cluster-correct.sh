@@ -219,10 +219,11 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
     # Take the input (zstat) image, threshold it at zthresh, and save the
     # thresheld values to othresh, and save a mask with the voxel size to osize.
     cluster \
-        --zstat=${outputprefix}_Z.nii.gz  \
-        --zthresh=${Z} \
-        --othresh=${outputprefix}_posclustersA \
-        --osize=${outputprefix}_pososize \
+        --zstat=${outputprefix}_Z.nii.gz        \
+        --zthresh=${Z}                          \
+        --othresh=${outputprefix}_posclustersA  \
+        --osize=${outputprefix}_pososize        \
+        --oindex=${outputprefix}_posoindex      \
     > ${outputprefix}_posclusters.txt
 
     # Cluster doesn't seem to like clustering negative values, so invert the
@@ -238,10 +239,11 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     # Run cluster on the inverted, treshheld data.
     cluster \
-        --zstat=${outputprefix}_Z-inv.nii.gz  \
-        --zthresh=${Z} \
-        --othresh=${outputprefix}_negclustersA \
-        --osize=${outputprefix}_negosize \
+        --zstat=${outputprefix}_Z-inv.nii.gz    \
+        --zthresh=${Z}                          \
+        --othresh=${outputprefix}_negclustersA  \
+        --osize=${outputprefix}_negosize        \
+        --oindex=${outputprefix}_negoindex      \
     > ${outputprefix}_negclusters.txt
 
     # The following steps are the same for both negative and positive, so wrap
@@ -259,9 +261,13 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
         # Mask clusters image to only include large enough clusters
         # fslmaths -mas treats all-0 masks as DON'T DO ANYTHING, not DON'T
         # INCLUDE anything ... wonderful
-        fslmaths ${outputprefix}_${sign}clustersA.nii.gz \
-            -mul ${outputprefix}_${sign}keepmap \
+        fslmaths ${outputprefix}_${sign}clustersA.nii.gz    \
+            -mul ${outputprefix}_${sign}keepmap.nii.gz      \
             ${outputprefix}_${sign}clusters.nii.gz
+
+        fslmaths ${outputprefix}_${sign}oindex.nii.gz   \
+            -mul ${outputprefix}_${sign}keepmap.nii.gz  \
+            ${outputprefix}_${sign}oindex.nii.gz
 
         # Is the mean of the cluster image 0? If so, save it to no text file,
         # else, save it to the yes file.
