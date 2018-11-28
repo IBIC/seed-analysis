@@ -4,6 +4,10 @@
 #* This means it does generate recipes in the form of GROUPDIFF_A-A, which is
 #* an unavoidable side-effect.
 
+all: GROUPDIFF_hcOn-pdOn GROUPDIFF_hcOn-pdOff  GROUPDIFF_pdOn-hcOn GROUPDIFF_pdOff-hcOn
+
+clustcorr: GROUPDIFF_hcOn-pdOn_clustcorr GROUPDIFF_hcOn-pdOff_clustcorr  GROUPDIFF_pdOn-hcOn_clustcorr GROUPDIFF_pdOff-hcOn_clustcorr
+
 # Has all the user-set variables like PROJECT_DIR
 include analysis/settings.conf
 
@@ -186,6 +190,7 @@ $(1)/nifti/$(2)_$(1)_mean.nii.gz: $(1)/headbrik/$(2)+????.BRIK
 #> Run the ttest on the available MEFC images; no cluster correction (not
 #> enough people)
 $(1)/headbrik/$(2)+????.BRIK:
+	echo here ;\
 	mkdir -p $(1)/headbrik ;\
 	export OMP_NUM_THREADS=1 ;\
 	group1=$$$$(echo $(1) | sed 's/-.*//') ;\
@@ -201,9 +206,7 @@ $(1)/headbrik/$(2)+????.BRIK:
 					group-$$$${group2}.txt) \
 		-overwrite \
 		-mask $(STANDARD_MASK) \
-		$(covariate) \
-		$(ANALYSIS) \
-		$(pairflag)
+		$(covariate) $(ANALYSIS) $(pairflag)
 
 # Generate different rules depending on whether the analysis was done on paired
 # or unpaired groups
