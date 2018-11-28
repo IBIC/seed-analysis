@@ -4,6 +4,10 @@
 #* This means it does generate recipes in the form of GROUPDIFF_A-A, which is
 #* an unavoidable side-effect.
 
+all: GROUPDIFF_pdOn-pdOff  GROUPDIFF_pdOff-pdOn
+
+clustcorr: GROUPDIFF_pdOn-pdOff_clustcorr  GROUPDIFF_pdOff-pdOn_clustcorr
+
 # Has all the user-set variables like PROJECT_DIR
 include analysis/settings.conf
 

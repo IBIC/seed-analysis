@@ -238,10 +238,10 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     # Run cluster on the inverted, treshheld data.
     cluster \
-        --zstat=${outputprefix}_Z-inv.nii.gz  \
-        --zthresh=${Z} \
-        --othresh=${outputprefix}_negclustersA \
-        --osize=${outputprefix}_negosize \
+        --zstat=${outputprefix}_Z-inv.nii.gz    \
+        --zthresh=${Z}                          \
+        --othresh=${outputprefix}_negclustersA  \
+        --osize=${outputprefix}_negosize        \
     > ${outputprefix}_negclusters.txt
 
     # The following steps are the same for both negative and positive, so wrap
@@ -284,7 +284,7 @@ for brik in $(seq 1 2 ${maxbrikindex}) ; do
 
     done
 
-    # Clean up
+    # Clean up all files if keep flag isn't set
     if [[ ${KEEP} != "yes" ]] ; then
         rm -f ${outputprefix}_*{clustersA,keepmap,osize,Z{,-inv}}.nii.gz
     fi
