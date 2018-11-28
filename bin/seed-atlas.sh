@@ -20,22 +20,24 @@ for the_file in ${files} ; do
 	tmpfile=$(mktemp /tmp/cluster_XXXX)
 	>&2 echo "Index file is ${tmpfile}"
 
+	# Must supply a threshold, 1e-6 is the smallest nifti value
 	cluster \
-		--in=${the_file} 	\
-		--thresh=0.000001	\
-		--oindex=${tmpfile}.nii.gz > /dev/null
+		--in=${the_file} 				\
+		--thresh=0.000001				\
+		--oindex=${tmpfile}-oi.nii.gz 	\
+		--othresh=${tmpfile}-ot.nii.gz	> /dev/null
 
 	# Get number of clusters in file
-	range=$(fslstats ${tmpfile} -R)
+	range=$(fslstats ${tmpfile}-oi -R)
 	max=$(echo ${range} | awk '{print $2}')
 
-	echo ${range}
+	# echo ${range}
 
 	# If the max value is 0, there are no clusters, so skip
 	if (( $(echo "${max} == 0" | bc -l) )) ; then
 
 		>&2 echo "Max for ${the_file} is 0, no clusters to check out"
-		echo -e "${bn}\tNA\tNA"
+		echo -e "${bn}\tNA\tNA\tNA\tNA\tNA\tNA"
 
 	else
 
@@ -43,23 +45,44 @@ for the_file in ${files} ; do
 		# echo ${bn} ${clusters}
 		for i in $(seq ${max}) ; do
 
-			clusterfile=${tmpfile}_${i}.nii.gz
-			>&2 echo "Cluster file is ${clusterfile}"
+			clustermask=${tmpfile}_${i}.nii.gz
+			>&2 echo "Cluster file is ${clustermask}"
 
+			# Extract the i'th cluster from o index file
 			fslmaths \
-				${tmpfile} 			\
-				-thr ${i} -uthr ${i} \
-				${clusterfile}
+				${tmpfile}-oi			\
+				-thr ${i} -uthr ${i} 	\
+				-bin					\
+				${clustermask}
+
+			# Get the values and mask them
+			clustervalues=${tmpfile}-cv
+			fslmaths \
+				${tmpfile}-ot 		\
+				-mul ${clustermask}	\
+				${clustervalues}
+
+			# Get the size in voxels
+			size_vx=$(fslstats ${clustermask} -V | awk '{print $1}')
+
+			# Get the coordinates of the max voxel, replaces spaces with tabs
+			# for output file (includes trailing space)
+			coords=$(fslstats ${clustervalues} -x | \
+						img2stdcoord \
+							-img ${FSLDIR}/data/standard/MNI152_T1_2mm \
+							-std ${FSLDIR}/data/standard/MNI152_T1_2mm \
+							-vox - |
+						sed -e 's/ \+/\t/g')
 
 			cort=$(atlasquery \
 					-a "Harvard-Oxford Cortical Structural Atlas" \
-					-m ${clusterfile} | tr '\n' ' ')
+					-m ${clustermask} | tr '\n' ' ')
 
 			scort=$(atlasquery \
 					-a "Harvard-Oxford Subcortical Structural Atlas" \
-					-m ${clusterfile} | tr '\n' ' ')
+					-m ${clustermask} | tr '\n' ' ')
 
-			echo -e "${bn}\t${i}\t${cort} ${scort}"
+			echo -e "${bn}\t${i}\t${size_vx}\t${coords}\t${cort} ${scort}"
 
 		done
 
