@@ -25,7 +25,7 @@ $(error Hyphen in one or more seed name(s))
 endif
 
 #! What are the groups in this analysis?
-groups=$(patsubst group-%.txt, %, $(wildcard group-[[:alpha:]]*.txt))
+groups=$(patsubst group-%.txt, %, $(wildcard group-[[:alpha:]]*.txt ))
 
 # Check to make sure there are no hyphens in group names, they'll muck things up
 ifneq ($(findstring -,$(groups)),)
@@ -36,7 +36,7 @@ endif
 #! matching contrats (like A-A).
 contrasts=$(foreach g1,$(groups), \
 			$(foreach g2,$(groups), \
-				$(filter-out $(g1)-$(g1),$(g1)-$(g2)) ))
+				$(filter-out $(g1)-$(g1),$(g1)-$(g2) ) ))
 
 # If a covariate file is given, add the flag to the covariate variable and
 # store the number of covariates for later. Otherwise, store the number of
@@ -316,22 +316,22 @@ endif
 # of groups.
 $(foreach contrast,$(contrasts), \
 	$(foreach seed,$(allseeds), \
-		$(eval $(call twogroup,$(contrast),$(seed)))))
+		$(eval $(call twogroup,$(contrast),$(seed))) ))
 
 $(foreach contrast,$(contrasts), \
 	$(eval $(call twogroup_dof,$(contrast))))
 
 .PHONY: EVERYTHING \
-		$(foreach contrast,$(contrasts), GROUPDIFF_${contrast})) \
+		$(foreach contrast,$(contrasts), GROUPDIFF_${contrast}) \
 		$(foreach group,$(groups), SINGLEGROUP_${group})
 
 .SECONDARY:
 
 #? This will run everything the makefile can do.
 EVERYTHING: $(foreach contrast,$(contrasts), \
-				GROUPDIFF_${contrast})) \
-		$(foreach group,$(groups), \
-			SINGLEGROUP_${group})
+				GROUPDIFF_${contrast}) \
+			$(foreach group,$(groups), \
+				SINGLEGROUP_${group})
 
 ################################################################################
 
