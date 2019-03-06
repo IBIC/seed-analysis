@@ -335,7 +335,7 @@ EVERYTHING: $(foreach contrast,$(contrasts), \
 
 ################################################################################
 
-#? Echo the value of a variable
+#? Echo the value of a variable; strip removes leading/trailing whitespace
 test-%:
-	@echo \'$($*)\' ;\
-	 echo "Count $*: $(words $($*))"
+	@echo \'$(strip $($*))\' ;\
+	 echo "Count $*: $(words $(strip $($*)))"
