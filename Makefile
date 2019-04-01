@@ -1,12 +1,12 @@
 #* This file works by loading in all the groups matching the regex group-*.txt
 #* and then generating single group and group difference recipes for each
 #* individual group and group difference recipes for each pair of groups.
-#* This means it does generate recipes in the form of GROUPDIFF_A-A, which is
-#* an unavoidable side-effect.
 
-all: GROUPDIFF_hcOn-pdOn GROUPDIFF_hcOn-pdOff  GROUPDIFF_pdOn-hcOn GROUPDIFF_pdOff-hcOn
+.PHONY: help
 
-clustcorr: GROUPDIFF_hcOn-pdOn_clustcorr GROUPDIFF_hcOn-pdOff_clustcorr  GROUPDIFF_pdOn-hcOn_clustcorr GROUPDIFF_pdOff-hcOn_clustcorr
+#? Help message coming soon
+help:
+	@echo "Help message coming soon."
 
 # Has all the user-set variables like PROJECT_DIR
 include analysis/settings.conf
@@ -56,13 +56,14 @@ ifneq ($(findstring -,$(covariatenames)),)
 $(error Hyphen in one or more covariate name(s))
 endif
 
-#! Check whether to do a paired t-test (group diff only); defaults to "no"
-ifdef PAIRED
-pairflag=-paired
-$(info Doing a paired test)
-else
+#! Check whether to do a paired t-test (group diff only); defaults to unpaired.
+#! Will be echoed any time makefile is interacted with.
+ifndef PAIRED
 pairflag=
-$(info Doing an unpaired test)
+$(info Doing an UNPAIRED t-test)
+else
+pairflag=-paired
+$(info Doing a PAIRED t-test)
 endif
 
 ################################################################################
