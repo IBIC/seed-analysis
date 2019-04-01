@@ -4,9 +4,23 @@
 
 .PHONY: help
 
-#? Help message coming soon
+#? Help message. The `@` silencing trick only works on new lines, so no line
+#? continuations (;\) here
 help:
-	@echo "Help message coming soon."
+	@echo "1a. Run SINGLEGROUP_<group> for every group you want."
+	@echo "1b. Run SINGLEGROUP_<group>_clustcorr to perform cluster" \
+				" correction (not automatic)."
+	@echo
+	@echo "2a. Run GROUPDIFF_<group1>-<group2> for any contrasts you want."
+	@echo "		GROUPDIFF *does not* depend on SINGLEGROUP in any way."
+	@echo "2b. Run GROUPDIFF_<g1>-<g2>_clustcorr to perform cluster correction."
+	@echo
+	@echo "3.  Explore */clustcorr directories for final results."
+	@echo
+	@echo "Here are the groups: $(groups)"
+	@echo "(Contrasts not displayed, there can be too many."
+	@echo "Try test-{groups,contrasts,allseeds} etc."
+	@echo
 
 # Has all the user-set variables like PROJECT_DIR
 include analysis/settings.conf
