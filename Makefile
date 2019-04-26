@@ -33,6 +33,9 @@ seedsdir=$(shell head -n1 analysis/allseeds.txt)
 #! allseeds.txt
 allseeds=$(shell tail -n+2 analysis/allseeds.txt)
 
+#! Count how many seeds there are
+n_seeds=$(words $(strip $(allseeds)))
+
 # Check to make sure there are no hyphens in seed names, they'll muck things up
 ifneq ($(findstring -,$(allseeds)),)
 $(error Hyphen in one or more seed name(s))
@@ -40,6 +43,9 @@ endif
 
 #! What are the groups in this analysis?
 groups=$(patsubst group-%.txt, %, $(wildcard group-[[:alpha:]]*.txt ))
+
+#! Count how many groups there are
+n_groups=$(words $(strip $(groups)))
 
 # Check to make sure there are no hyphens in group names, they'll muck things up
 ifneq ($(findstring -,$(groups)),)
@@ -51,6 +57,9 @@ endif
 contrasts=$(foreach g1,$(groups), \
 			$(foreach g2,$(groups), \
 				$(filter-out $(g1)-$(g1),$(g1)-$(g2) ) ))
+
+#! Count how many contrasts there are
+n_contrasts=$(words $(strip $(contrasts)))
 
 # If a covariate file is given, add the flag to the covariate variable and
 # store the number of covariates for later. Otherwise, store the number of
@@ -74,11 +83,15 @@ endif
 #! Will be echoed any time makefile is interacted with.
 ifndef PAIRED
 pairflag=
-$(info Doing an UNPAIRED t-test)
+$(info t-test is set to UNPAIRED)
 else
 pairflag=-paired
-$(info Doing a PAIRED t-test)
+$(info t-test is set to PAIRED)
 endif
+
+# Give the user a message while the makefile compiles.
+$(info Preparing your makefile ... $(n_groups) groups, \
+		$(n_contrasts) contrasts, and $(n_seeds) seeds)
 
 ################################################################################
 # Single-group analysis

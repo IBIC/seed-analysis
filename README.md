@@ -9,6 +9,20 @@ Below is a general guide to setting up this pipeline for any project.
 We assume that you will clone this repository and, in that directory,
 follow these instructions.
 
+This script creates a number of recipes based on the number of groups and seeds.
+The number of recipes it has to create is based on:
+
+    seeds * groups + seeds * contrasts
+
+where `contrasts` is:
+
+    seeds^2 - seeds
+
+So, the time it takes make to prepare rises with the square of groups *and*
+linearly with the number of seeds. As these increase, make might take a while to
+get ready to be invoked, and might look like it's hanging. Try `make
+test-contrasts` to see how long it takes to compile.
+
 *Important*: Do not use a hyphen (`-`) in group, seed, or covariate names.
 Or anywhere, really. The system relies in many places on hyphens being used
 exclusively to identify contrasts (e.g. `patient-control`). I have built in a
@@ -308,7 +322,8 @@ one-core execution to complete.
 #### 8.2 Parellelizing on the grid engine
 
 Check that the grid engine is set up properly for your user/machine. See
-[here](http://faculty.washington.edu/madhyt/using-the-gridengine-to-process-data-quickly/) for instructions.
+[here](http://faculty.washington.edu/madhyt/using-the-gridengine-to-process-data-quickly/)
+for instructions.
 
 You can submit the jobs on the queue with `qmake`:
 
