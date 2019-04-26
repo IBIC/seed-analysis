@@ -24,7 +24,7 @@ to get ready to be invoked, and might look like it's hanging. Try `make
 test-contrasts` to see how long it takes to compile.
 
 The number of recipes is multiplied by two to account for the cluster correction
-recipes, which are separate from the bse processing.
+recipes, which are separate from the base processing.
 
 *Important*: Do not use a hyphen (`-`) in group, seed, or covariate names.
 Or anywhere, really. The system relies in many places on hyphens being used
