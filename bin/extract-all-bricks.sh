@@ -20,8 +20,8 @@ inputfiles=${@}
 mkdir -p ${outputdir}
 
 # Loop over each of the input files
-for ifile in ${inputfiles}
-do
+for ifile in ${inputfiles} ; do
+
 	# Skip this file if it isn't a brik file
 	if [[ ! ${ifile} =~ .*BRIK ]]; then
 		>&2 echo "${ifile} isn't a BRIK file!"
@@ -46,10 +46,10 @@ do
 
 	# Extract the brick with the label for that brik
 	# Is there a better way to do this?
-	for i in $(seq 0 ${maxbrikindex})
-	do
+	for i in $(seq 0 ${maxbrikindex}) ;	do
 	 	3dAFNItoNIFTI \
 			-prefix ${outputdir}/${roi}_${labels[$i]}.nii.gz \
 			${ifile}[${i}]
 	done
+
 done
